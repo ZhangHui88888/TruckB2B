@@ -1,50 +1,81 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { getAllProductSlugs, getProductBySlug, type Product } from '../../lib/supabase';
 
-export function getStaticPaths() {
-  // Sample products (will be replaced with Supabase data later)
-  const products = [
-    {
-      id: '1',
-      name: 'VOLVO FH4 LED Headlamp Left',
-      brand: 'VOLVO',
-      category: 'Headlamps',
-      oeNumber: '21221129',
-      crossReference: ['21221130', '21221131'],
-      fitment: ['VOLVO FH4 2013-2020', 'VOLVO FM4 2013-2020'],
-      image: '/images/products/placeholder.jpg',
-      images: ['/images/products/placeholder.jpg'],
-      description: 'High quality LED headlamp for VOLVO FH4 series trucks. This aftermarket headlamp is manufactured to OEM specifications and features advanced LED technology for superior visibility and durability.',
-      features: [
-        'LED technology for better visibility',
-        'OEM quality construction',
-        'Direct fit replacement',
-        'ADB certified',
-        'Weather resistant'
-      ],
-      specifications: {
-        'Part Type': 'Headlamp',
-        'Position': 'Left (Driver Side)',
-        'Light Source': 'LED',
-        'Voltage': '24V',
-        'Material': 'PP + PC',
-        'Certification': 'ADB, E-Mark'
-      }
-    },
-  ];
-
-  return products.map(product => ({
-    params: { id: product.id },
-    props: { product }
-  }));
+export async function getStaticPaths() {
+  // 从 Supabase 获取所有产品 slugs
+  const slugs = await getAllProductSlugs();
+  
+  // 如果数据库为空，使用示例数据
+  if (slugs.length === 0) {
+    const sampleProducts = [
+      {
+        id: '1',
+        slug: 'volvo-fh4-led-headlamp-left',
+        name: 'VOLVO FH4 LED Headlamp Left',
+        brand_name: 'VOLVO',
+        brand_slug: 'volvo',
+        category_name: 'Headlamps',
+        category_slug: 'headlamps',
+        oe_number: '21221129',
+        cross_reference: ['21221130', '21221131'],
+        fitment: ['VOLVO FH4 2013-2020', 'VOLVO FM4 2013-2020'],
+        main_image_url: '',
+        images: [],
+        description: 'High quality LED headlamp for VOLVO FH4 series trucks. This aftermarket headlamp is manufactured to OEM specifications and features advanced LED technology for superior visibility and durability.',
+        features: [
+          'LED technology for better visibility',
+          'OEM quality construction',
+          'Direct fit replacement',
+          'ADB certified',
+          'Weather resistant'
+        ],
+        specifications: {
+          'Part Type': 'Headlamp',
+          'Position': 'Left (Driver Side)',
+          'Light Source': 'LED',
+          'Voltage': '24V',
+          'Material': 'PP + PC',
+          'Certification': 'ADB, E-Mark'
+        },
+        is_active: true,
+        is_featured: false,
+        created_at: '',
+        updated_at: '',
+      },
+    ];
+    
+    return sampleProducts.map(product => ({
+      params: { id: product.slug },
+      props: { product }
+    }));
+  }
+  
+  // 为每个 slug 生成静态路径
+  const paths = await Promise.all(
+    slugs.map(async (slug) => {
+      const product = await getProductBySlug(slug);
+      return {
+        params: { id: slug },
+        props: { product }
+      };
+    })
+  );
+  
+  return paths.filter(p => p.props.product !== null);
 }
 
-const { product } = Astro.props;
+const { product } = Astro.props as { product: Product };
+
+// 如果产品不存在，重定向到产品列表
+if (!product) {
+  return Astro.redirect('/products');
+}
 ---
 
 <Layout 
   title={product.name}
-  description={`${product.name} - OE: ${product.oeNumber}. ${product.description.slice(0, 150)}...`}
+  description={`${product.name} - OE: ${product.oe_number}. ${(product.description || '').slice(0, 150)}...`}
 >
   <div class="container mx-auto px-4 py-8">
     <!-- Breadcrumb -->
@@ -53,64 +84,125 @@ const { product } = Astro.props;
         <li><a href="/" class="hover:text-primary">Home</a></li>
         <li>/</li>
         <li><a href="/products" class="hover:text-primary">Products</a></li>
+        {product.brand_slug && (
+          <>
+            <li>/</li>
+            <li>
+              <a href={`/products?brand=${product.brand_slug}`} class="hover:text-primary">
+                {product.brand_name}
+              </a>
+            </li>
+          </>
+        )}
         <li>/</li>
-        <li class="text-gray-900">{product.name}</li>
+        <li class="text-gray-900 truncate max-w-[200px]">{product.name}</li>
       </ol>
     </nav>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
       <!-- Product Images -->
       <div>
-        <div class="bg-gray-100 rounded-xl aspect-square flex items-center justify-center mb-4">
-          <svg class="w-32 h-32 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-          </svg>
-        </div>
-        <div class="grid grid-cols-4 gap-2">
-          {[1, 2, 3, 4].map(() => (
-            <div class="bg-gray-100 rounded-lg aspect-square flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary">
-              <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="bg-gray-100 rounded-xl aspect-square overflow-hidden mb-4" id="main-image">
+          {product.main_image_url ? (
+            <img 
+              src={product.main_image_url} 
+              alt={product.name}
+              class="w-full h-full object-contain"
+              id="main-product-image"
+            />
+          ) : (
+            <div class="w-full h-full flex items-center justify-center">
+              <svg class="w-32 h-32 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
               </svg>
             </div>
-          ))}
+          )}
         </div>
+        
+        <!-- Thumbnail Gallery -->
+        {product.images && product.images.length > 0 ? (
+          <div class="grid grid-cols-4 gap-2">
+            {product.images.slice(0, 4).map((img, index) => (
+              <button 
+                class={`bg-gray-100 rounded-lg aspect-square overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary ${index === 0 ? 'ring-2 ring-primary' : ''}`}
+                data-image={img}
+                onclick="document.getElementById('main-product-image').src = this.dataset.image; document.querySelectorAll('[data-image]').forEach(el => el.classList.remove('ring-2', 'ring-primary')); this.classList.add('ring-2', 'ring-primary');"
+              >
+                <img src={img} alt={`${product.name} - Image ${index + 1}`} class="w-full h-full object-cover" />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div class="grid grid-cols-4 gap-2">
+            {[1, 2, 3, 4].map(() => (
+              <div class="bg-gray-100 rounded-lg aspect-square flex items-center justify-center">
+                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <!-- Product Info -->
       <div>
-        <div class="mb-4">
-          <span class="bg-primary text-white text-sm font-medium px-3 py-1 rounded">{product.brand}</span>
-          <span class="bg-gray-100 text-gray-700 text-sm font-medium px-3 py-1 rounded ml-2">{product.category}</span>
+        <div class="mb-4 flex flex-wrap gap-2">
+          {product.brand_name && (
+            <a href={`/products?brand=${product.brand_slug}`} class="bg-primary text-white text-sm font-medium px-3 py-1 rounded hover:bg-primary-dark transition-colors">
+              {product.brand_name}
+            </a>
+          )}
+          {product.category_name && (
+            <a href={`/products?category=${product.category_slug}`} class="bg-gray-100 text-gray-700 text-sm font-medium px-3 py-1 rounded hover:bg-gray-200 transition-colors">
+              {product.category_name}
+            </a>
+          )}
         </div>
         
         <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
         
         <div class="bg-gray-50 rounded-lg p-4 mb-6">
-          <div class="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <span class="text-gray-500">OE Number:</span>
-              <span class="font-semibold text-gray-900 ml-2">{product.oeNumber}</span>
-            </div>
-            {product.crossReference && (
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            {product.oe_number && (
+              <div>
+                <span class="text-gray-500">OE Number:</span>
+                <span class="font-semibold text-gray-900 ml-2">{product.oe_number}</span>
+              </div>
+            )}
+            {product.cross_reference && product.cross_reference.length > 0 && (
               <div>
                 <span class="text-gray-500">Cross Ref:</span>
-                <span class="font-semibold text-gray-900 ml-2">{product.crossReference.join(', ')}</span>
+                <span class="font-semibold text-gray-900 ml-2">{product.cross_reference.join(', ')}</span>
+              </div>
+            )}
+            {product.sku && (
+              <div>
+                <span class="text-gray-500">SKU:</span>
+                <span class="font-semibold text-gray-900 ml-2">{product.sku}</span>
+              </div>
+            )}
+            {product.fitment_years && (
+              <div>
+                <span class="text-gray-500">Years:</span>
+                <span class="font-semibold text-gray-900 ml-2">{product.fitment_years}</span>
               </div>
             )}
           </div>
         </div>
 
-        <p class="text-gray-600 mb-6">{product.description}</p>
+        {product.description && (
+          <p class="text-gray-600 mb-6 whitespace-pre-line">{product.description}</p>
+        )}
 
         <!-- Fitment -->
-        {product.fitment && (
+        {product.fitment && product.fitment.length > 0 && (
           <div class="mb-6">
-            <h3 class="font-semibold text-gray-900 mb-2">Fitment</h3>
+            <h3 class="font-semibold text-gray-900 mb-2">Fitment / Compatible Vehicles</h3>
             <ul class="space-y-1">
-              {product.fitment.map((fit: string) => (
+              {product.fitment.map((fit) => (
                 <li class="flex items-center gap-2 text-gray-600">
-                  <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                   </svg>
                   {fit}
@@ -123,7 +215,7 @@ const { product } = Astro.props;
         <!-- CTA Buttons -->
         <div class="flex flex-col sm:flex-row gap-4 mb-8">
           <a 
-            href={`https://wa.me/8613062870118?text=Hi, I'm interested in ${encodeURIComponent(product.name)} (OE: ${product.oeNumber})`}
+            href={`https://wa.me/8613062870118?text=Hi, I'm interested in ${encodeURIComponent(product.name)}${product.oe_number ? ` (OE: ${product.oe_number})` : ''}`}
             target="_blank"
             rel="noopener noreferrer"
             class="flex-1 bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-semibold text-center transition-colors inline-flex items-center justify-center gap-2"
@@ -142,13 +234,13 @@ const { product } = Astro.props;
         </div>
 
         <!-- Features -->
-        {product.features && (
+        {product.features && product.features.length > 0 && (
           <div class="border-t pt-6">
             <h3 class="font-semibold text-gray-900 mb-3">Features</h3>
             <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {product.features.map((feature: string) => (
+              {product.features.map((feature) => (
                 <li class="flex items-center gap-2 text-gray-600">
-                  <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                   </svg>
                   {feature}
@@ -161,7 +253,7 @@ const { product } = Astro.props;
     </div>
 
     <!-- Specifications -->
-    {product.specifications && (
+    {product.specifications && Object.keys(product.specifications).length > 0 && (
       <section class="bg-white rounded-xl shadow-sm p-6 mb-8">
         <h2 class="text-xl font-bold text-gray-900 mb-4">Specifications</h2>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -181,15 +273,15 @@ const { product } = Astro.props;
     "@context": "https://schema.org",
     "@type": "Product",
     "name": product.name,
-    "image": `https://xk-truck.cn${product.image}`,
-    "description": product.description,
+    "image": product.main_image_url || `https://xk-truck.cn/images/placeholder.jpg`,
+    "description": product.description || product.short_description,
     "brand": {
       "@type": "Brand",
-      "name": product.brand
+      "name": product.brand_name
     },
-    "sku": product.oeNumber,
-    "mpn": product.oeNumber,
-    "category": product.category,
+    "sku": product.oe_number,
+    "mpn": product.oe_number,
+    "category": product.category_name,
     "offers": {
       "@type": "Offer",
       "priceCurrency": "USD",

@@ -1,0 +1,32 @@
+name: Sync Products
+
+on:
+  # 手动触发
+  workflow_dispatch:
+  
+  # 定时运行 (每周一凌晨3点)
+  schedule:
+    - cron: '0 19 * * 0'  # UTC 时间，对应北京时间周一凌晨3点
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run sync script
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: npm run sync:products
