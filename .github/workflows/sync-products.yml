@@ -12,6 +12,10 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     
+    defaults:
+      run:
+        working-directory: ./xk-truck-frontend
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -21,6 +25,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: './xk-truck-frontend/package-lock.json'
       
       - name: Install dependencies
         run: npm ci
