@@ -1,0 +1,197 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const brands = ['VOLVO', 'SCANIA', 'MERCEDES-BENZ', 'MAN', 'IVECO', 'RENAULT', 'DAF', 'FORD'];
+const categories = ['Headlamps', 'Mirrors', 'Body Parts', 'Lighting', 'Grilles', 'Bumpers'];
+
+// Sample products (will be replaced with Supabase data later)
+const products = [
+  {
+    id: '1',
+    name: 'VOLVO FH4 LED Headlamp Left',
+    brand: 'VOLVO',
+    category: 'Headlamps',
+    oeNumber: '21221129',
+    image: '/images/products/placeholder.jpg',
+    description: 'High quality LED headlamp for VOLVO FH4 series trucks'
+  },
+  {
+    id: '2',
+    name: 'SCANIA R Series Mirror Assembly',
+    brand: 'SCANIA',
+    category: 'Mirrors',
+    oeNumber: '1723519',
+    image: '/images/products/placeholder.jpg',
+    description: 'Complete mirror assembly for SCANIA R series'
+  },
+  {
+    id: '3',
+    name: 'MERCEDES-BENZ Actros Grille',
+    brand: 'MERCEDES-BENZ',
+    category: 'Grilles',
+    oeNumber: '9437500918',
+    image: '/images/products/placeholder.jpg',
+    description: 'Front grille for Mercedes-Benz Actros MP4'
+  },
+  {
+    id: '4',
+    name: 'MAN TGX Fog Lamp',
+    brand: 'MAN',
+    category: 'Lighting',
+    oeNumber: '81251016521',
+    image: '/images/products/placeholder.jpg',
+    description: 'Fog lamp for MAN TGX series trucks'
+  },
+  {
+    id: '5',
+    name: 'IVECO Stralis Bumper',
+    brand: 'IVECO',
+    category: 'Bumpers',
+    oeNumber: '504284315',
+    image: '/images/products/placeholder.jpg',
+    description: 'Front bumper for IVECO Stralis'
+  },
+  {
+    id: '6',
+    name: 'DAF XF Mirror Cover',
+    brand: 'DAF',
+    category: 'Mirrors',
+    oeNumber: '1689348',
+    image: '/images/products/placeholder.jpg',
+    description: 'Mirror cover for DAF XF series'
+  },
+];
+---
+
+<Layout 
+  title="Products" 
+  description="Browse our complete range of heavy truck parts - headlamps, mirrors, body parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD."
+>
+  <!-- Page Header -->
+  <section class="bg-gray-900 text-white py-12">
+    <div class="container mx-auto px-4">
+      <h1 class="text-3xl md:text-4xl font-bold mb-4">Products</h1>
+      <p class="text-gray-300 max-w-2xl">
+        Browse our complete catalog of heavy truck parts. Filter by brand or category to find what you need.
+      </p>
+    </div>
+  </section>
+
+  <div class="container mx-auto px-4 py-8">
+    <div class="flex flex-col lg:flex-row gap-8">
+      <!-- Sidebar Filters -->
+      <aside class="lg:w-64 flex-shrink-0">
+        <div class="bg-white rounded-xl shadow-sm p-6 sticky top-24">
+          <!-- Brand Filter -->
+          <div class="mb-6">
+            <h3 class="font-semibold text-gray-900 mb-3">Brand</h3>
+            <div class="space-y-2">
+              {brands.map(brand => (
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    name="brand" 
+                    value={brand.toLowerCase()}
+                    class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
+                  />
+                  <span class="text-gray-700">{brand}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <!-- Category Filter -->
+          <div class="mb-6">
+            <h3 class="font-semibold text-gray-900 mb-3">Category</h3>
+            <div class="space-y-2">
+              {categories.map(category => (
+                <label class="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    name="category" 
+                    value={category.toLowerCase()}
+                    class="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary"
+                  />
+                  <span class="text-gray-700">{category}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <!-- Search -->
+          <div>
+            <h3 class="font-semibold text-gray-900 mb-3">Search</h3>
+            <input 
+              type="text" 
+              placeholder="OE number or keyword..."
+              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+            />
+          </div>
+        </div>
+      </aside>
+
+      <!-- Products Grid -->
+      <main class="flex-grow">
+        <div class="flex items-center justify-between mb-6">
+          <p class="text-gray-600">
+            Showing <span class="font-semibold">{products.length}</span> products
+          </p>
+          <select class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+            <option>Sort by: Newest</option>
+            <option>Sort by: Name A-Z</option>
+            <option>Sort by: Name Z-A</option>
+            <option>Sort by: Brand</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+          {products.map(product => (
+            <a 
+              href={`/products/${product.id}`}
+              class="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow group"
+            >
+              <div class="aspect-square bg-gray-100 relative overflow-hidden">
+                <div class="absolute inset-0 flex items-center justify-center bg-gray-200">
+                  <svg class="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <div class="absolute top-3 left-3">
+                  <span class="bg-primary text-white text-xs font-medium px-2 py-1 rounded">
+                    {product.brand}
+                  </span>
+                </div>
+              </div>
+              <div class="p-4">
+                <h3 class="font-semibold text-gray-900 mb-1 group-hover:text-primary transition-colors">
+                  {product.name}
+                </h3>
+                <p class="text-sm text-gray-500 mb-2">{product.category}</p>
+                <p class="text-sm text-gray-600 mb-3 line-clamp-2">{product.description}</p>
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-gray-500">OE: {product.oeNumber}</span>
+                  <span class="text-primary font-medium text-sm">View Details →</span>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+
+        <!-- Pagination placeholder -->
+        <div class="mt-8 flex justify-center">
+          <nav class="flex items-center gap-2">
+            <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50" disabled>
+              Previous
+            </button>
+            <button class="px-4 py-2 bg-primary text-white rounded-lg">1</button>
+            <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">2</button>
+            <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">3</button>
+            <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+              Next
+            </button>
+          </nav>
+        </div>
+      </main>
+    </div>
+  </div>
+</Layout>

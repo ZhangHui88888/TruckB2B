@@ -1,0 +1,192 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const stats = [
+  { value: '35,000㎡', label: 'Factory Area' },
+  { value: '8+', label: 'Brands Covered' },
+  { value: '500+', label: 'Products' },
+  { value: '50+', label: 'Countries Served' },
+];
+
+const certifications = [
+  'ADB Certified',
+  'E-Mark Approved',
+  'ISO 9001:2015',
+  'IATF 16949'
+];
+---
+
+<Layout 
+  title="About Us" 
+  description="XKTRUCK - Professional heavy truck parts manufacturer with 35,000㎡ factory in China. OEM quality parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, and more."
+>
+  <!-- Hero Section -->
+  <section class="bg-gray-900 text-white py-16 md:py-24">
+    <div class="container mx-auto px-4">
+      <div class="max-w-3xl">
+        <h1 class="text-3xl md:text-5xl font-bold mb-6">About XKTRUCK</h1>
+        <p class="text-xl text-gray-300">
+          Leading manufacturer of aftermarket heavy truck parts, committed to OEM quality and customer satisfaction since establishment.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats Section -->
+  <section class="py-12 bg-white border-b">
+    <div class="container mx-auto px-4">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+        {stats.map(stat => (
+          <div class="text-center">
+            <div class="text-3xl md:text-4xl font-bold text-primary mb-2">{stat.value}</div>
+            <div class="text-gray-600">{stat.label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Company Story -->
+  <section class="py-16 md:py-24">
+    <div class="container mx-auto px-4">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <h2 class="text-3xl font-bold text-gray-900 mb-6">Our Story</h2>
+          <div class="space-y-4 text-gray-600">
+            <p>
+              XKTRUCK (also known as XKLAMP) is a professional manufacturer specializing in heavy truck parts, 
+              including headlamps, mirrors, and exterior body parts for major European truck brands.
+            </p>
+            <p>
+              With a 35,000 square meter manufacturing facility in China, we combine advanced production 
+              technology with strict quality control to deliver products that meet OEM standards at 
+              competitive wholesale prices.
+            </p>
+            <p>
+              Our products are designed for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, and FORD 
+              trucks, serving dealers and distributors in over 50 countries worldwide.
+            </p>
+          </div>
+        </div>
+        <div class="bg-gray-200 rounded-xl aspect-video flex items-center justify-center">
+          <div class="text-center text-gray-500">
+            <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+            </svg>
+            <p>Factory Image</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why Choose Us -->
+  <section class="py-16 md:py-24 bg-gray-50">
+    <div class="container mx-auto px-4">
+      <h2 class="text-3xl font-bold text-gray-900 mb-12 text-center">Why Choose Us</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">OEM Quality</h3>
+          <p class="text-gray-600">
+            All products are manufactured to original equipment specifications, ensuring perfect fit and reliable performance.
+          </p>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">Competitive Pricing</h3>
+          <p class="text-gray-600">
+            Direct factory pricing without middlemen, offering the best value for quality truck parts.
+          </p>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">Global Shipping</h3>
+          <p class="text-gray-600">
+            Fast and reliable shipping to over 50 countries with experienced logistics partners.
+          </p>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">Quality Control</h3>
+          <p class="text-gray-600">
+            Rigorous testing and inspection at every stage of production to ensure consistent quality.
+          </p>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">Expert Support</h3>
+          <p class="text-gray-600">
+            Dedicated team with deep product knowledge to help you find the right parts.
+          </p>
+        </div>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm">
+          <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-900 mb-2">Wide Coverage</h3>
+          <p class="text-gray-600">
+            Comprehensive range covering 8 major truck brands with 500+ product SKUs.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Certifications -->
+  <section class="py-16 md:py-24 bg-white">
+    <div class="container mx-auto px-4">
+      <h2 class="text-3xl font-bold text-gray-900 mb-12 text-center">Certifications</h2>
+      <div class="flex flex-wrap justify-center gap-6">
+        {certifications.map(cert => (
+          <div class="bg-gray-50 px-8 py-4 rounded-lg border border-gray-200">
+            <span class="font-semibold text-gray-900">{cert}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-16 md:py-24 bg-primary">
+    <div class="container mx-auto px-4 text-center">
+      <h2 class="text-3xl font-bold text-white mb-4">Ready to Partner With Us?</h2>
+      <p class="text-blue-100 max-w-2xl mx-auto mb-8">
+        Contact us today to discuss your truck parts requirements. We offer competitive wholesale pricing and reliable global shipping.
+      </p>
+      <a 
+        href="/contact" 
+        class="inline-block bg-white hover:bg-gray-100 text-primary px-8 py-4 rounded-lg font-semibold text-lg transition-colors"
+      >
+        Contact Us
+      </a>
+    </div>
+  </section>
+</Layout>

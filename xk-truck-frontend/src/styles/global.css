@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/* Custom theme colors */
+:root {
+  --color-primary: #1e40af;
+  --color-primary-dark: #1e3a8a;
+  --color-secondary: #f97316;
+  --color-accent: #0ea5e9;
+}
+
+/* Custom utility classes */
+@theme {
+  --color-primary: #1e40af;
+  --color-primary-dark: #1e3a8a;
+  --color-secondary: #f97316;
+  --color-accent: #0ea5e9;
+}
+
+/* Base styles */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
