@@ -20,6 +20,9 @@ import * as cheerio from 'cheerio';
 // =====================================================
 const CONFIG = {
   sourceUrl: 'https://xklamp.com',
+  // Shopify 格式: /zh/collections/{brand}
+  collectionPath: '/zh/collections',
+  productPath: '/zh/products',
   brands: ['volvo', 'scania', 'mercedes-benz', 'man', 'iveco', 'renault', 'daf', 'ford'],
   delayBetweenRequests: 1000, // ms
 };
@@ -87,16 +90,15 @@ function ensureFullUrl(url) {
 // =====================================================
 
 /**
- * 解析品牌产品列表页
- * 注意: 选择器需要根据 xklamp.com 实际 HTML 结构调整
+ * 解析品牌产品列表页 (Shopify 格式)
  */
 async function parseBrandProductList(brandSlug) {
   const products = [];
   let page = 1;
   let hasMore = true;
   
-  while (hasMore && page <= 10) { // 限制最多10页
-    const url = `${CONFIG.sourceUrl}/products/${brandSlug}?page=${page}`;
+  while (hasMore && page <= 10) {
+    const url = `${CONFIG.sourceUrl}${CONFIG.collectionPath}/${brandSlug}?page=${page}`;
     console.log(`  📄 获取: ${url}`);
     
     const html = await fetchPage(url);
@@ -107,31 +109,71 @@ async function parseBrandProductList(brandSlug) {
     
     const $ = cheerio.load(html);
     
-    // 尝试多种选择器 (根据实际网站调整)
-    const productCards = $('.product-card, .product-item, .product-box, [data-product], .item');
+    // Shopify 产品卡片选择器
+    const productCards = $('a[href*="/products/"]').filter((_, el) => {
+      const href = $(el).attr('href') || '';
+      return href.includes('/products/') && !href.includes('#');
+    });
     
-    if (productCards.length === 0) {
-      console.log(`  ⚠️ 未找到产品，可能需要调整选择器`);
+    // 去重 (Shopify 页面可能有重复链接)
+    const seenUrls = new Set();
+    const uniqueProducts = [];
+    
+    productCards.each((_, el) => {
+      const $el = $(el);
+      const href = $el.attr('href');
+      const fullUrl = ensureFullUrl(href);
+      
+      if (fullUrl && !seenUrls.has(fullUrl)) {
+        seenUrls.add(fullUrl);
+        
+        // 从链接文本或父元素获取产品名称
+        let name = $el.text().trim();
+        if (!name || name.length < 5) {
+          name = $el.find('h2, h3, .card__heading, .product-title').text().trim();
+        }
+        if (!name || name.length < 5) {
+          name = $el.closest('.card, .product-card, .grid__item').find('h2, h3, .card__heading').text().trim();
+        }
+        
+        // 从产品名称提取 OE 编号 (通常是开头的数字)
+        const oeMatch = name.match(/^(\d{6,})/);
+        const oeNumber = oeMatch ? oeMatch[1] : '';
+        
+        // 获取图片
+        const $card = $el.closest('.card, .product-card, .grid__item');
+        let image = $card.find('img').first().attr('src') || $card.find('img').first().attr('data-src');
+        if (!image) {
+          image = $el.find('img').attr('src');
+        }
+        
+        if (name && name.length > 5) {
+          uniqueProducts.push({
+            sourceUrl: fullUrl,
+            name: name,
+            image: ensureFullUrl(image),
+            oeNumber: oeNumber,
+            brand: brandSlug,
+          });
+        }
+      }
+    });
+    
+    if (uniqueProducts.length === 0) {
+      console.log(`  ⚠️ 第 ${page} 页未找到产品`);
       hasMore = false;
       continue;
     }
     
-    productCards.each((_, el) => {
-      const $el = $(el);
-      const product = {
-        sourceUrl: ensureFullUrl($el.find('a').first().attr('href')),
-        name: $el.find('.product-name, .title, h3, h4, .name').first().text().trim(),
-        image: ensureFullUrl($el.find('img').first().attr('src') || $el.find('img').first().attr('data-src')),
-        oeNumber: $el.find('.oe-number, .part-number, .sku').first().text().trim().replace(/OE:?\s*/i, ''),
-        brand: brandSlug,
-      };
-      
-      if (product.name) {
-        products.push(product);
-      }
-    });
+    products.push(...uniqueProducts);
+    console.log(`  ✓ 第 ${page} 页找到 ${uniqueProducts.length} 个产品`);
     
-    console.log(`  ✓ 找到 ${productCards.length} 个产品`);
+    // 检查是否有下一页
+    const hasNextPage = $('a[href*="page=' + (page + 1) + '"]').length > 0 ||
+                        $('.pagination__item--next, .next').length > 0;
+    if (!hasNextPage) {
+      hasMore = false;
+    }
     
     page++;
     await delay(CONFIG.delayBetweenRequests);
@@ -141,7 +183,7 @@ async function parseBrandProductList(brandSlug) {
 }
 
 /**
- * 解析产品详情页
+ * 解析产品详情页 (Shopify 格式)
  */
 async function parseProductDetail(productUrl) {
   const html = await fetchPage(productUrl);
@@ -150,9 +192,9 @@ async function parseProductDetail(productUrl) {
   const $ = cheerio.load(html);
   
   const detail = {
-    name: $('h1, .product-title, .product-name').first().text().trim(),
-    description: $('.product-description, .description, .content').first().text().trim(),
-    shortDescription: $('.short-description, .excerpt, .summary').first().text().trim(),
+    name: '',
+    description: '',
+    shortDescription: '',
     oeNumber: '',
     crossReference: [],
     images: [],
@@ -162,26 +204,75 @@ async function parseProductDetail(productUrl) {
     category: '',
   };
   
-  // 解析 OE 编号
-  const oeText = $('.oe-number, .part-number, [data-oe]').first().text();
-  detail.oeNumber = oeText.replace(/OE\s*:?\s*/i, '').trim();
+  // Shopify 产品标题
+  detail.name = $('h1.product__title, h1.product-single__title, h1').first().text().trim();
   
-  // 解析图片 - 直接使用原始 URL
-  $('.product-images img, .gallery img, .product-gallery img, .main-image img').each((_, el) => {
-    const src = ensureFullUrl($(el).attr('src') || $(el).attr('data-src') || $(el).attr('data-large'));
-    if (src && !detail.images.includes(src)) {
-      detail.images.push(src);
+  // 从标题提取 OE 编号
+  const oeMatch = detail.name.match(/^(\d{6,})/);
+  if (oeMatch) {
+    detail.oeNumber = oeMatch[1];
+  }
+  
+  // Shopify 产品描述
+  detail.description = $('.product__description, .product-single__description, .product-description, [data-product-description]').first().text().trim();
+  
+  // 从描述中提取适配车型 (Compatible with xxx)
+  const compatMatch = detail.name.match(/Compatible with\s+(.+)/i);
+  if (compatMatch) {
+    detail.fitment.push(compatMatch[1].trim());
+  }
+  
+  // Shopify 产品图片
+  // 主图
+  const mainImg = $('img.product__media-image, img.product-single__photo, .product-featured-media img, .product__media img').first();
+  let mainSrc = mainImg.attr('src') || mainImg.attr('data-src');
+  if (mainSrc) {
+    // Shopify 图片 URL 处理 - 获取大图
+    mainSrc = mainSrc.replace(/_\d+x\d*\./, '_1024x.').replace(/\?.*$/, '');
+    if (mainSrc.startsWith('//')) mainSrc = 'https:' + mainSrc;
+    detail.images.push(mainSrc);
+  }
+  
+  // 缩略图
+  $('img.product__media-image, .product__media-item img, .product-single__thumbnail img, .thumbnail-list img').each((_, el) => {
+    let src = $(el).attr('src') || $(el).attr('data-src');
+    if (src) {
+      src = src.replace(/_\d+x\d*\./, '_1024x.').replace(/\?.*$/, '');
+      if (src.startsWith('//')) src = 'https:' + src;
+      if (!detail.images.includes(src)) {
+        detail.images.push(src);
+      }
     }
   });
   
-  // 解析适配车型
-  $('.fitment li, .compatible-vehicles li, .application li').each((_, el) => {
-    const text = $(el).text().trim();
-    if (text) detail.fitment.push(text);
+  // 从 JSON-LD 获取更多信息
+  $('script[type="application/ld+json"]').each((_, el) => {
+    try {
+      const json = JSON.parse($(el).html());
+      if (json['@type'] === 'Product') {
+        if (!detail.name && json.name) detail.name = json.name;
+        if (!detail.description && json.description) detail.description = json.description;
+        if (json.image && Array.isArray(json.image)) {
+          json.image.forEach(img => {
+            if (!detail.images.includes(img)) {
+              detail.images.push(img);
+            }
+          });
+        }
+        if (json.sku) detail.oeNumber = json.sku;
+      }
+    } catch (e) {
+      // ignore JSON parse errors
+    }
   });
   
-  // 解析分类
-  detail.category = $('.breadcrumb a, .category-name').last().text().trim();
+  // 分类从面包屑获取
+  $('.breadcrumb a, .breadcrumbs a').each((_, el) => {
+    const text = $(el).text().trim();
+    if (text && text.toLowerCase() !== 'home' && text !== '首页') {
+      detail.category = text;
+    }
+  });
   
   return detail;
 }
