@@ -137,11 +137,17 @@ function parseShopifyProduct(product, brandSlug) {
 // =====================================================
 
 async function getBrandId(brandSlug) {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('brands')
     .select('id')
     .eq('slug', brandSlug)
     .single();
+  
+  if (error) {
+    console.error(`  ❌ 查询品牌失败: ${error.message}`);
+    console.error(`  详情: ${JSON.stringify(error)}`);
+  }
+  
   return data?.id;
 }
 
@@ -270,6 +276,25 @@ async function main() {
   console.log('🚀 XKTRUCK 产品同步 (Shopify JSON API)');
   console.log('📷 图片直接使用 Shopify CDN URL');
   console.log('========================================');
+  
+  // 测试数据库连接
+  console.log('\n🔗 测试数据库连接...');
+  console.log(`  URL: ${supabaseUrl}`);
+  const { data: testData, error: testError } = await supabase.from('brands').select('count');
+  if (testError) {
+    console.error(`❌ 数据库连接失败: ${testError.message}`);
+    console.error(`详情: ${JSON.stringify(testError)}`);
+    process.exit(1);
+  }
+  console.log(`✅ 数据库连接成功`);
+  
+  // 列出所有品牌
+  const { data: allBrands, error: brandsError } = await supabase.from('brands').select('slug');
+  if (brandsError) {
+    console.error(`❌ 获取品牌列表失败: ${brandsError.message}`);
+  } else {
+    console.log(`📋 数据库中的品牌: ${allBrands?.map(b => b.slug).join(', ') || '无'}`);
+  }
   
   const startTime = Date.now();
   let totalSuccess = 0;
