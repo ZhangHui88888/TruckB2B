@@ -20,8 +20,18 @@ import { createClient } from '@supabase/supabase-js';
 const CONFIG = {
   sourceUrl: 'https://xklamp.com',
   // Shopify JSON API 格式
-  apiPath: '/zh/collections/{brand}/products.json',
-  brands: ['volvo', 'scania', 'mercedes-benz', 'man', 'iveco', 'renault', 'daf', 'ford'],
+  apiPath: '/zh/collections/{collection}/products.json',
+  // xklamp.com collection 路径 -> 数据库品牌 slug 映射
+  brandMapping: {
+    'volvo': 'volvo',
+    'scania': 'scania', 
+    'benz': 'mercedes-benz',      // xklamp 用 benz，数据库用 mercedes-benz
+    'man': 'man',
+    'iveco': 'iveco',
+    'renault': 'renault',
+    'daf': 'daf',
+    'ford': 'ford',
+  },
   delayBetweenRequests: 500, // ms
 };
 
@@ -58,8 +68,8 @@ function generateSlug(text) {
 /**
  * 从 Shopify JSON API 获取产品列表
  */
-async function fetchShopifyProducts(brandSlug) {
-  const url = `${CONFIG.sourceUrl}${CONFIG.apiPath.replace('{brand}', brandSlug)}`;
+async function fetchShopifyProducts(collectionSlug) {
+  const url = `${CONFIG.sourceUrl}${CONFIG.apiPath.replace('{collection}', collectionSlug)}`;
   console.log(`  📄 获取: ${url}`);
   
   try {
@@ -194,17 +204,17 @@ async function upsertProduct(product) {
 // 主同步函数
 // =====================================================
 
-async function syncBrand(brandSlug) {
-  console.log(`\n🚛 开始同步品牌: ${brandSlug.toUpperCase()}`);
+async function syncBrand(collectionSlug, dbBrandSlug) {
+  console.log(`\n🚛 开始同步品牌: ${dbBrandSlug.toUpperCase()} (collection: ${collectionSlug})`);
   
-  const brandId = await getBrandId(brandSlug);
+  const brandId = await getBrandId(dbBrandSlug);
   if (!brandId) {
-    console.error(`❌ 未找到品牌: ${brandSlug}`);
+    console.error(`❌ 未找到品牌: ${dbBrandSlug}`);
     return { success: 0, failed: 0 };
   }
   
   // 从 Shopify JSON API 获取产品
-  const shopifyProducts = await fetchShopifyProducts(brandSlug);
+  const shopifyProducts = await fetchShopifyProducts(collectionSlug);
   console.log(`📦 共找到 ${shopifyProducts.length} 个产品`);
   
   if (shopifyProducts.length === 0) {
@@ -217,7 +227,7 @@ async function syncBrand(brandSlug) {
   for (const shopifyProduct of shopifyProducts) {
     try {
       // 解析 Shopify 产品数据
-      const parsed = parseShopifyProduct(shopifyProduct, brandSlug);
+      const parsed = parseShopifyProduct(shopifyProduct, dbBrandSlug);
       console.log(`  处理: ${parsed.name}`);
       
       // 根据标签确定分类
@@ -300,8 +310,9 @@ async function main() {
   let totalSuccess = 0;
   let totalFailed = 0;
   
-  for (const brand of CONFIG.brands) {
-    const result = await syncBrand(brand);
+  // 遍历品牌映射
+  for (const [collectionSlug, dbBrandSlug] of Object.entries(CONFIG.brandMapping)) {
+    const result = await syncBrand(collectionSlug, dbBrandSlug);
     totalSuccess += result.success;
     totalFailed += result.failed;
   }
@@ -321,7 +332,7 @@ async function main() {
     status: totalFailed === 0 ? 'success' : 'partial',
     items_synced: totalSuccess,
     items_failed: totalFailed,
-    details: { brands: CONFIG.brands, duration: `${duration}s` },
+    details: { brands: Object.keys(CONFIG.brandMapping), duration: `${duration}s` },
   });
 }
 
