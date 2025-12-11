@@ -1,0 +1,300 @@
+---
+/**
+ * AI 客服聊天组件
+ * 浮动在页面右下角，点击展开聊天窗口
+ */
+---
+
+<!-- 聊天按钮 -->
+<button
+  id="chat-toggle"
+  class="fixed bottom-24 right-6 z-40 bg-primary hover:bg-primary-dark text-white p-4 rounded-full shadow-lg transition-all hover:scale-110"
+  aria-label="Chat with us"
+>
+  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+  </svg>
+</button>
+
+<!-- 聊天窗口 -->
+<div
+  id="chat-window"
+  class="fixed bottom-24 right-6 z-50 w-96 max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl hidden flex-col overflow-hidden"
+  style="height: 500px; max-height: calc(100vh - 120px);"
+>
+  <!-- 头部 -->
+  <div class="bg-primary text-white px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+        </svg>
+      </div>
+      <div>
+        <div class="font-semibold">XKTRUCK Support</div>
+        <div class="text-xs text-white/80">We typically reply instantly</div>
+      </div>
+    </div>
+    <button id="chat-close" class="p-1 hover:bg-white/20 rounded-lg transition-colors">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- 消息区域 -->
+  <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+    <!-- 欢迎消息 -->
+    <div class="flex gap-3">
+      <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+        </svg>
+      </div>
+      <div class="bg-white rounded-2xl rounded-tl-sm px-4 py-2 shadow-sm max-w-[80%]">
+        <p class="text-gray-700 text-sm">Hello! Welcome to XKTRUCK. How can I help you today?</p>
+        <p class="text-xs text-gray-400 mt-1">Just now</p>
+      </div>
+    </div>
+
+    <!-- 快捷问题 -->
+    <div class="flex flex-wrap gap-2">
+      <button class="quick-question bg-white border border-gray-200 text-gray-700 text-xs px-3 py-2 rounded-full hover:bg-gray-100 transition-colors">
+        What products do you offer?
+      </button>
+      <button class="quick-question bg-white border border-gray-200 text-gray-700 text-xs px-3 py-2 rounded-full hover:bg-gray-100 transition-colors">
+        What's your MOQ?
+      </button>
+      <button class="quick-question bg-white border border-gray-200 text-gray-700 text-xs px-3 py-2 rounded-full hover:bg-gray-100 transition-colors">
+        How to get a quote?
+      </button>
+    </div>
+  </div>
+
+  <!-- 输入区域 -->
+  <div class="p-4 bg-white border-t">
+    <form id="chat-form" class="flex gap-2">
+      <input
+        type="text"
+        id="chat-input"
+        placeholder="Type your message..."
+        class="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-primary focus:border-primary text-sm"
+        autocomplete="off"
+      />
+      <button
+        type="submit"
+        id="chat-send"
+        class="bg-primary hover:bg-primary-dark text-white p-2 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+        </svg>
+      </button>
+    </form>
+    <p class="text-xs text-gray-400 text-center mt-2">
+      Or chat on <a href="https://wa.me/8613062870118" target="_blank" class="text-green-600 hover:underline">WhatsApp</a>
+    </p>
+  </div>
+</div>
+
+<script>
+  const API_URL = import.meta.env.PUBLIC_API_URL || 'https://xk-truck-api.harry-zhang592802.workers.dev';
+  
+  // 生成或获取会话 ID
+  function getSessionId(): string {
+    let sessionId = localStorage.getItem('xktruck_chat_session');
+    if (!sessionId) {
+      sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('xktruck_chat_session', sessionId);
+    }
+    return sessionId;
+  }
+
+  // DOM 元素
+  const chatToggle = document.getElementById('chat-toggle');
+  const chatWindow = document.getElementById('chat-window');
+  const chatClose = document.getElementById('chat-close');
+  const chatForm = document.getElementById('chat-form') as HTMLFormElement;
+  const chatInput = document.getElementById('chat-input') as HTMLInputElement;
+  const chatMessages = document.getElementById('chat-messages');
+  const chatSend = document.getElementById('chat-send') as HTMLButtonElement;
+  const quickQuestions = document.querySelectorAll('.quick-question');
+
+  // 切换聊天窗口
+  chatToggle?.addEventListener('click', () => {
+    chatWindow?.classList.toggle('hidden');
+    chatWindow?.classList.toggle('flex');
+    if (!chatWindow?.classList.contains('hidden')) {
+      chatInput?.focus();
+    }
+  });
+
+  chatClose?.addEventListener('click', () => {
+    chatWindow?.classList.add('hidden');
+    chatWindow?.classList.remove('flex');
+  });
+
+  // 快捷问题点击
+  quickQuestions.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const question = btn.textContent?.trim();
+      if (question) {
+        chatInput.value = question;
+        sendMessage(question);
+      }
+    });
+  });
+
+  // 发送消息
+  chatForm?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const message = chatInput.value.trim();
+    if (message) {
+      sendMessage(message);
+    }
+  });
+
+  async function sendMessage(message: string) {
+    // 清空输入框
+    chatInput.value = '';
+    
+    // 添加用户消息到界面
+    addMessage('user', message);
+    
+    // 隐藏快捷问题
+    const quickQuestionsContainer = chatMessages?.querySelector('.flex.flex-wrap');
+    if (quickQuestionsContainer) {
+      quickQuestionsContainer.remove();
+    }
+    
+    // 显示加载状态
+    const loadingId = addLoadingMessage();
+    
+    // 禁用发送按钮
+    chatSend.disabled = true;
+    
+    try {
+      const response = await fetch(`${API_URL}/api/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message,
+          sessionId: getSessionId()
+        })
+      });
+      
+      const result = await response.json();
+      
+      // 移除加载消息
+      removeLoadingMessage(loadingId);
+      
+      if (result.success) {
+        addMessage('assistant', result.reply, !result.aiEnabled);
+      } else {
+        addMessage('assistant', result.reply || 'Sorry, something went wrong. Please try again.');
+      }
+    } catch (error) {
+      console.error('Chat error:', error);
+      removeLoadingMessage(loadingId);
+      addMessage('assistant', 'Network error. Please try again or contact us via WhatsApp.');
+    } finally {
+      chatSend.disabled = false;
+      chatInput.focus();
+    }
+  }
+
+  // 添加消息到界面
+  function addMessage(role: 'user' | 'assistant', content: string, isOffline = false) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `flex gap-3 ${role === 'user' ? 'flex-row-reverse' : ''}`;
+    
+    const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    
+    if (role === 'user') {
+      messageDiv.innerHTML = `
+        <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+          </svg>
+        </div>
+        <div class="bg-primary text-white rounded-2xl rounded-tr-sm px-4 py-2 max-w-[80%]">
+          <p class="text-sm">${escapeHtml(content)}</p>
+          <p class="text-xs text-white/70 mt-1">${time}</p>
+        </div>
+      `;
+    } else {
+      messageDiv.innerHTML = `
+        <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          </svg>
+        </div>
+        <div class="bg-white rounded-2xl rounded-tl-sm px-4 py-2 shadow-sm max-w-[80%]">
+          <p class="text-gray-700 text-sm">${escapeHtml(content)}</p>
+          ${isOffline ? '<p class="text-xs text-orange-500 mt-1">⏳ Our team will respond shortly</p>' : ''}
+          <p class="text-xs text-gray-400 mt-1">${time}</p>
+        </div>
+      `;
+    }
+    
+    chatMessages?.appendChild(messageDiv);
+    scrollToBottom();
+  }
+
+  // 添加加载消息
+  function addLoadingMessage(): string {
+    const id = 'loading_' + Date.now();
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = id;
+    loadingDiv.className = 'flex gap-3';
+    loadingDiv.innerHTML = `
+      <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+        </svg>
+      </div>
+      <div class="bg-white rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm">
+        <div class="flex gap-1">
+          <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0ms"></span>
+          <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 150ms"></span>
+          <span class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 300ms"></span>
+        </div>
+      </div>
+    `;
+    chatMessages?.appendChild(loadingDiv);
+    scrollToBottom();
+    return id;
+  }
+
+  // 移除加载消息
+  function removeLoadingMessage(id: string) {
+    document.getElementById(id)?.remove();
+  }
+
+  // 滚动到底部
+  function scrollToBottom() {
+    if (chatMessages) {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  }
+
+  // HTML 转义
+  function escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+
+<style>
+  @keyframes bounce {
+    0%, 60%, 100% {
+      transform: translateY(0);
+    }
+    30% {
+      transform: translateY(-4px);
+    }
+  }
+</style>

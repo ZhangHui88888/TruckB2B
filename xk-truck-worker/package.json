@@ -1,0 +1,17 @@
+{
+  "name": "xk-truck-worker",
+  "version": "1.0.0",
+  "description": "XKTRUCK API Worker - 询盘处理、AI客服",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

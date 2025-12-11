@@ -259,10 +259,80 @@ import Layout from '../layouts/Layout.astro';
 </Layout>
 
 <script>
-  const form = document.getElementById('contact-form');
+  const API_URL = import.meta.env.PUBLIC_API_URL || 'https://xk-truck-api.harry-zhang592802.workers.dev';
+  
+  const form = document.getElementById('contact-form') as HTMLFormElement;
+  const submitBtn = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
+  
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    // Form submission will be handled by Cloudflare Worker later
-    alert('Thank you for your message! We will get back to you within 24 hours.');
+    
+    // 获取表单数据
+    const formData = new FormData(form);
+    const data = {
+      name: formData.get('name'),
+      email: formData.get('email'),
+      company: formData.get('company'),
+      phone: formData.get('phone'),
+      subject: formData.get('subject'),
+      message: formData.get('message'),
+      source: 'contact_form'
+    };
+    
+    // 禁用按钮，显示加载状态
+    const originalText = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+    
+    try {
+      const response = await fetch(`${API_URL}/api/inquiry`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // 成功提示
+        showNotification('success', result.message || 'Thank you for your inquiry! We will get back to you within 24 hours.');
+        form.reset();
+      } else {
+        // 错误提示
+        showNotification('error', result.error || 'Failed to send message. Please try again.');
+      }
+    } catch (error) {
+      console.error('Submit error:', error);
+      showNotification('error', 'Network error. Please try again or contact us via WhatsApp.');
+    } finally {
+      // 恢复按钮
+      submitBtn.disabled = false;
+      submitBtn.textContent = originalText;
+    }
   });
+  
+  // 显示通知
+  function showNotification(type: 'success' | 'error', message: string) {
+    // 移除已有通知
+    document.querySelectorAll('.form-notification').forEach(el => el.remove());
+    
+    const notification = document.createElement('div');
+    notification.className = `form-notification fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-md ${
+      type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+    }`;
+    notification.innerHTML = `
+      <div class="flex items-center gap-3">
+        <span class="text-xl">${type === 'success' ? '✓' : '✕'}</span>
+        <p>${message}</p>
+      </div>
+    `;
+    document.body.appendChild(notification);
+    
+    // 5秒后自动消失
+    setTimeout(() => {
+      notification.remove();
+    }, 5000);
+  }
 </script>

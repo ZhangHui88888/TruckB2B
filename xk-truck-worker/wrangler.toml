@@ -1,0 +1,22 @@
+name = "xk-truck-api"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+# 环境变量（敏感信息通过 wrangler secret 设置）
+[vars]
+CORS_ORIGIN = "https://xk-truck.cn"
+
+# 生产环境
+[env.production]
+vars = { CORS_ORIGIN = "https://xk-truck.cn" }
+
+# 开发环境
+[env.development]
+vars = { CORS_ORIGIN = "*" }
+
+# 需要通过 wrangler secret put 设置的密钥：
+# - SUPABASE_URL
+# - SUPABASE_SERVICE_KEY
+# - DEEPSEEK_API_KEY
+# - RESEND_API_KEY
+# - NOTIFY_EMAIL
