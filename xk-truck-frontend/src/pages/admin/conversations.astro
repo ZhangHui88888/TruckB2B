@@ -1,0 +1,227 @@
+---
+/**
+ * 管理后台 - 对话记录
+ */
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Conversations" currentPage="conversations">
+  <!-- 筛选栏 -->
+  <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+    <div class="flex flex-wrap gap-4 items-center">
+      <input
+        type="text"
+        id="filter-session"
+        placeholder="Search by session ID..."
+        class="px-4 py-2 border border-gray-300 rounded-lg text-sm w-64"
+      />
+      <select id="filter-role" class="px-4 py-2 border border-gray-300 rounded-lg text-sm">
+        <option value="">All Messages</option>
+        <option value="user">User Only</option>
+        <option value="assistant">AI Only</option>
+      </select>
+      <button id="btn-refresh" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors">
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- 统计 -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm p-4">
+      <p class="text-sm text-gray-500">Total Sessions</p>
+      <p class="text-2xl font-bold text-gray-900" id="stat-sessions">-</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-4">
+      <p class="text-sm text-gray-500">Total Messages</p>
+      <p class="text-2xl font-bold text-blue-600" id="stat-messages">-</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-4">
+      <p class="text-sm text-gray-500">AI Responses</p>
+      <p class="text-2xl font-bold text-green-600" id="stat-ai-responses">-</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- 会话列表 -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-200">
+        <h3 class="font-semibold text-gray-900">Sessions</h3>
+      </div>
+      <div id="sessions-list" class="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+        <div class="px-4 py-8 text-center text-gray-500">Loading...</div>
+      </div>
+    </div>
+
+    <!-- 对话详情 -->
+    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <h3 class="font-semibold text-gray-900">Conversation</h3>
+        <span id="selected-session" class="text-sm text-gray-500">Select a session</span>
+      </div>
+      <div id="conversation-detail" class="p-4 max-h-[600px] overflow-y-auto bg-gray-50">
+        <div class="text-center text-gray-500 py-12">
+          Select a session from the left to view conversation
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const API_URL = 'https://xk-truck-api.harry-zhang592802.workers.dev';
+  
+  let selectedSession: string | null = null;
+
+  // 加载会话列表
+  async function loadSessions() {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/conversations/sessions`);
+      const sessionsList = document.getElementById('sessions-list');
+      
+      if (!res.ok) {
+        sessionsList!.innerHTML = '<div class="px-4 py-8 text-center text-gray-500">No conversations yet</div>';
+        return;
+      }
+      
+      const data = await res.json();
+      
+      // 更新统计
+      document.getElementById('stat-sessions')!.textContent = (data.sessions?.length || 0).toString();
+      document.getElementById('stat-messages')!.textContent = (data.totalMessages || 0).toString();
+      document.getElementById('stat-ai-responses')!.textContent = (data.aiResponses || 0).toString();
+      
+      if (!data.sessions || data.sessions.length === 0) {
+        sessionsList!.innerHTML = '<div class="px-4 py-8 text-center text-gray-500">No conversations yet</div>';
+        return;
+      }
+      
+      sessionsList!.innerHTML = data.sessions.map((session: any) => `
+        <button
+          class="session-item w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${selectedSession === session.session_id ? 'bg-blue-50 border-l-4 border-primary' : ''}"
+          data-session="${session.session_id}"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-medium text-gray-900 truncate">${session.session_id.substring(0, 20)}...</span>
+            <span class="text-xs text-gray-500">${session.message_count} msgs</span>
+          </div>
+          <div class="text-xs text-gray-500 mt-1">${formatTime(session.last_message)}</div>
+        </button>
+      `).join('');
+      
+      // 绑定点击事件
+      document.querySelectorAll('.session-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          const sessionId = (e.currentTarget as HTMLElement).dataset.session;
+          if (sessionId) {
+            selectSession(sessionId);
+          }
+        });
+      });
+    } catch (error) {
+      console.error('Failed to load sessions:', error);
+      document.getElementById('sessions-list')!.innerHTML = 
+        '<div class="px-4 py-8 text-center text-red-500">Failed to load sessions</div>';
+    }
+  }
+
+  // 选择会话
+  async function selectSession(sessionId: string) {
+    selectedSession = sessionId;
+    document.getElementById('selected-session')!.textContent = sessionId.substring(0, 30) + '...';
+    
+    // 更新选中状态
+    document.querySelectorAll('.session-item').forEach(item => {
+      if ((item as HTMLElement).dataset.session === sessionId) {
+        item.classList.add('bg-blue-50', 'border-l-4', 'border-primary');
+      } else {
+        item.classList.remove('bg-blue-50', 'border-l-4', 'border-primary');
+      }
+    });
+    
+    // 加载对话内容
+    await loadConversation(sessionId);
+  }
+
+  // 加载对话内容
+  async function loadConversation(sessionId: string) {
+    const detailDiv = document.getElementById('conversation-detail');
+    detailDiv!.innerHTML = '<div class="text-center text-gray-500 py-12">Loading...</div>';
+    
+    try {
+      const res = await fetch(`${API_URL}/api/admin/conversations/${sessionId}`);
+      
+      if (!res.ok) {
+        detailDiv!.innerHTML = '<div class="text-center text-gray-500 py-12">No messages found</div>';
+        return;
+      }
+      
+      const data = await res.json();
+      
+      if (!data.messages || data.messages.length === 0) {
+        detailDiv!.innerHTML = '<div class="text-center text-gray-500 py-12">No messages found</div>';
+        return;
+      }
+      
+      detailDiv!.innerHTML = `
+        <div class="space-y-4">
+          ${data.messages.map((msg: any) => `
+            <div class="flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}">
+              <div class="max-w-[80%] ${msg.role === 'user' ? 'bg-primary text-white' : 'bg-white shadow-sm'} rounded-2xl px-4 py-3">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-xs ${msg.role === 'user' ? 'text-white/70' : 'text-gray-500'}">
+                    ${msg.role === 'user' ? 'Customer' : 'AI Assistant'}
+                  </span>
+                  ${msg.is_ai ? '<span class="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">AI</span>' : ''}
+                </div>
+                <p class="text-sm whitespace-pre-wrap">${escapeHtml(msg.message)}</p>
+                <p class="text-xs ${msg.role === 'user' ? 'text-white/50' : 'text-gray-400'} mt-1">
+                  ${formatTime(msg.created_at)}
+                </p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      
+      // 滚动到底部
+      detailDiv!.scrollTop = detailDiv!.scrollHeight;
+    } catch (error) {
+      console.error('Failed to load conversation:', error);
+      detailDiv!.innerHTML = '<div class="text-center text-red-500 py-12">Failed to load conversation</div>';
+    }
+  }
+
+  function escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+  }
+
+  function formatTime(timestamp: string): string {
+    if (!timestamp) return '-';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // 事件绑定
+  document.getElementById('btn-refresh')?.addEventListener('click', loadSessions);
+
+  // 初始化
+  document.addEventListener('DOMContentLoaded', () => {
+    const checkAndLoad = () => {
+      if (sessionStorage.getItem('xktruck_admin_auth') === 'true') {
+        loadSessions();
+      } else {
+        setTimeout(checkAndLoad, 500);
+      }
+    };
+    checkAndLoad();
+  });
+</script>

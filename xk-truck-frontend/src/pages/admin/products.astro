@@ -1,0 +1,332 @@
+---
+/**
+ * 管理后台 - 产品管理
+ */
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Products" currentPage="products">
+  <!-- 操作栏 -->
+  <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+    <div class="flex flex-wrap gap-4 items-center justify-between">
+      <div class="flex gap-4 items-center">
+        <input
+          type="text"
+          id="filter-search"
+          placeholder="Search products..."
+          class="px-4 py-2 border border-gray-300 rounded-lg text-sm w-64"
+        />
+        <select id="filter-brand" class="px-4 py-2 border border-gray-300 rounded-lg text-sm">
+          <option value="">All Brands</option>
+          <option value="volvo">VOLVO</option>
+          <option value="scania">SCANIA</option>
+          <option value="mercedes-benz">MERCEDES-BENZ</option>
+          <option value="man">MAN</option>
+          <option value="iveco">IVECO</option>
+          <option value="renault">RENAULT</option>
+          <option value="daf">DAF</option>
+          <option value="ford">FORD</option>
+        </select>
+      </div>
+      <button
+        id="btn-sync"
+        class="px-6 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Sync from xklamp.com
+      </button>
+    </div>
+  </div>
+
+  <!-- 同步状态提示 -->
+  <div id="sync-status" class="hidden mb-6 p-4 rounded-xl">
+    <div class="flex items-center gap-3">
+      <div id="sync-icon"></div>
+      <div>
+        <p id="sync-message" class="font-medium"></p>
+        <p id="sync-detail" class="text-sm opacity-80"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 产品统计 -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm p-4">
+      <p class="text-sm text-gray-500">Total Products</p>
+      <p class="text-2xl font-bold text-gray-900" id="stat-total">-</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-4">
+      <p class="text-sm text-gray-500">Active</p>
+      <p class="text-2xl font-bold text-green-600" id="stat-active">-</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-4">
+      <p class="text-sm text-gray-500">Featured</p>
+      <p class="text-2xl font-bold text-purple-600" id="stat-featured">-</p>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-4">
+      <p class="text-sm text-gray-500">Last Sync</p>
+      <p class="text-lg font-medium text-gray-600" id="stat-last-sync">Never</p>
+    </div>
+  </div>
+
+  <!-- 产品列表 -->
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Brand</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">OE Number</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="products-list" class="divide-y divide-gray-200">
+          <tr>
+            <td colspan="6" class="px-6 py-8 text-center text-gray-500">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- 分页 -->
+    <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+      <p class="text-sm text-gray-500">
+        Showing <span id="showing-count">0</span> of <span id="total-count">0</span> products
+      </p>
+      <div class="flex gap-2">
+        <button id="btn-prev" class="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50" disabled>
+          Previous
+        </button>
+        <button id="btn-next" class="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50" disabled>
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  import { supabase } from '../../lib/supabase';
+  
+  let currentPage = 1;
+  const pageSize = 20;
+  let totalCount = 0;
+
+  // 加载产品列表
+  async function loadProducts() {
+    const search = (document.getElementById('filter-search') as HTMLInputElement).value;
+    const brand = (document.getElementById('filter-brand') as HTMLSelectElement).value;
+    
+    try {
+      let query = supabase
+        .from('products')
+        .select(`
+          *,
+          brands(name, slug),
+          categories(name, slug)
+        `, { count: 'exact' });
+      
+      if (brand) {
+        query = query.eq('brands.slug', brand);
+      }
+      
+      if (search) {
+        query = query.or(`name.ilike.%${search}%,oe_number.ilike.%${search}%`);
+      }
+      
+      const from = (currentPage - 1) * pageSize;
+      const to = from + pageSize - 1;
+      
+      const { data, error, count } = await query
+        .order('created_at', { ascending: false })
+        .range(from, to);
+      
+      const tbody = document.getElementById('products-list');
+      totalCount = count || 0;
+      
+      document.getElementById('total-count')!.textContent = totalCount.toString();
+      document.getElementById('showing-count')!.textContent = (data?.length || 0).toString();
+      
+      // 更新分页按钮
+      (document.getElementById('btn-prev') as HTMLButtonElement).disabled = currentPage <= 1;
+      (document.getElementById('btn-next') as HTMLButtonElement).disabled = currentPage * pageSize >= totalCount;
+      
+      if (error || !data || data.length === 0) {
+        tbody!.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No products found</td></tr>';
+        return;
+      }
+      
+      tbody!.innerHTML = data.map((product: any) => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                ${product.main_image_url 
+                  ? `<img src="${product.main_image_url}" alt="${escapeHtml(product.name)}" class="w-full h-full object-cover"/>`
+                  : `<div class="w-full h-full flex items-center justify-center text-gray-400">
+                      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                      </svg>
+                    </div>`
+                }
+              </div>
+              <div>
+                <div class="font-medium text-gray-900">${escapeHtml(product.name)}</div>
+                <div class="text-sm text-gray-500">${escapeHtml(product.slug)}</div>
+              </div>
+            </div>
+          </td>
+          <td class="px-6 py-4 text-sm text-gray-600">${product.brands?.name || '-'}</td>
+          <td class="px-6 py-4 text-sm text-gray-600">${product.categories?.name || '-'}</td>
+          <td class="px-6 py-4 text-sm font-mono text-gray-600">${escapeHtml(product.oe_number || '-')}</td>
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-2">
+              ${product.is_active 
+                ? '<span class="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">Active</span>'
+                : '<span class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">Inactive</span>'
+              }
+              ${product.is_featured 
+                ? '<span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">Featured</span>'
+                : ''
+              }
+            </div>
+          </td>
+          <td class="px-6 py-4">
+            <a href="/products/${product.slug}" target="_blank" class="text-primary hover:underline text-sm">
+              View →
+            </a>
+          </td>
+        </tr>
+      `).join('');
+      
+    } catch (error) {
+      console.error('Failed to load products:', error);
+      document.getElementById('products-list')!.innerHTML = 
+        '<tr><td colspan="6" class="px-6 py-8 text-center text-red-500">Failed to load products</td></tr>';
+    }
+  }
+
+  // 加载统计
+  async function loadStats() {
+    try {
+      const { count: total } = await supabase.from('products').select('*', { count: 'exact', head: true });
+      const { count: active } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true);
+      const { count: featured } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_featured', true);
+      
+      document.getElementById('stat-total')!.textContent = (total || 0).toString();
+      document.getElementById('stat-active')!.textContent = (active || 0).toString();
+      document.getElementById('stat-featured')!.textContent = (featured || 0).toString();
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    }
+  }
+
+  // 同步产品
+  async function syncProducts() {
+    const btn = document.getElementById('btn-sync') as HTMLButtonElement;
+    const statusDiv = document.getElementById('sync-status');
+    const iconDiv = document.getElementById('sync-icon');
+    const messageEl = document.getElementById('sync-message');
+    const detailEl = document.getElementById('sync-detail');
+    
+    btn.disabled = true;
+    btn.innerHTML = `
+      <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+      Syncing...
+    `;
+    
+    statusDiv!.classList.remove('hidden', 'bg-green-100', 'bg-red-100', 'bg-blue-100');
+    statusDiv!.classList.add('bg-blue-100');
+    iconDiv!.innerHTML = '<svg class="w-6 h-6 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
+    messageEl!.textContent = 'Syncing products from xklamp.com...';
+    messageEl!.className = 'font-medium text-blue-800';
+    detailEl!.textContent = 'This may take a few minutes';
+    detailEl!.className = 'text-sm text-blue-600';
+
+    try {
+      const API_URL = 'https://xk-truck-api.harry-zhang592802.workers.dev';
+      const res = await fetch(`${API_URL}/api/admin/sync-products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const result = await res.json();
+      
+      if (result.success) {
+        statusDiv!.classList.remove('bg-blue-100');
+        statusDiv!.classList.add('bg-green-100');
+        iconDiv!.innerHTML = '<svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+        messageEl!.textContent = 'Sync completed successfully!';
+        messageEl!.className = 'font-medium text-green-800';
+        detailEl!.textContent = `${result.count || 0} products synced`;
+        detailEl!.className = 'text-sm text-green-600';
+        
+        document.getElementById('stat-last-sync')!.textContent = 'Just now';
+        
+        // 重新加载数据
+        loadProducts();
+        loadStats();
+      } else {
+        throw new Error(result.error || 'Sync failed');
+      }
+    } catch (error: any) {
+      statusDiv!.classList.remove('bg-blue-100');
+      statusDiv!.classList.add('bg-red-100');
+      iconDiv!.innerHTML = '<svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
+      messageEl!.textContent = 'Sync failed';
+      messageEl!.className = 'font-medium text-red-800';
+      detailEl!.textContent = error.message || 'Please try again later';
+      detailEl!.className = 'text-sm text-red-600';
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Sync from xklamp.com
+      `;
+    }
+  }
+
+  function escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+  }
+
+  // 事件绑定
+  document.getElementById('filter-search')?.addEventListener('input', debounce(() => { currentPage = 1; loadProducts(); }, 500));
+  document.getElementById('filter-brand')?.addEventListener('change', () => { currentPage = 1; loadProducts(); });
+  document.getElementById('btn-sync')?.addEventListener('click', syncProducts);
+  document.getElementById('btn-prev')?.addEventListener('click', () => { currentPage--; loadProducts(); });
+  document.getElementById('btn-next')?.addEventListener('click', () => { currentPage++; loadProducts(); });
+
+  function debounce(fn: Function, delay: number) {
+    let timer: number;
+    return (...args: any[]) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
+  }
+
+  // 初始化
+  document.addEventListener('DOMContentLoaded', () => {
+    const checkAndLoad = () => {
+      if (sessionStorage.getItem('xktruck_admin_auth') === 'true') {
+        loadProducts();
+        loadStats();
+      } else {
+        setTimeout(checkAndLoad, 500);
+      }
+    };
+    checkAndLoad();
+  });
+</script>

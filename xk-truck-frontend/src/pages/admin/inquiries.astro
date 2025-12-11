@@ -1,0 +1,358 @@
+---
+/**
+ * 管理后台 - 询盘列表
+ */
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Inquiries" currentPage="inquiries">
+  <!-- 筛选栏 -->
+  <div class="bg-white rounded-xl shadow-sm p-4 mb-6">
+    <div class="flex flex-wrap gap-4 items-center">
+      <select id="filter-status" class="px-4 py-2 border border-gray-300 rounded-lg text-sm">
+        <option value="">All Status</option>
+        <option value="new">New</option>
+        <option value="contacted">Contacted</option>
+        <option value="quoted">Quoted</option>
+        <option value="closed">Closed</option>
+      </select>
+      <select id="filter-subject" class="px-4 py-2 border border-gray-300 rounded-lg text-sm">
+        <option value="">All Subjects</option>
+        <option value="quote">Quote Request</option>
+        <option value="product">Product Inquiry</option>
+        <option value="wholesale">Wholesale</option>
+        <option value="support">Support</option>
+      </select>
+      <input
+        type="text"
+        id="filter-search"
+        placeholder="Search by name or email..."
+        class="px-4 py-2 border border-gray-300 rounded-lg text-sm w-64"
+      />
+      <button id="btn-refresh" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors">
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- 询盘列表 -->
+  <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Message</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="inquiries-list" class="divide-y divide-gray-200">
+          <tr>
+            <td colspan="7" class="px-6 py-8 text-center text-gray-500">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- 分页 -->
+    <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+      <p class="text-sm text-gray-500">
+        Showing <span id="showing-count">0</span> of <span id="total-count">0</span> inquiries
+      </p>
+      <div class="flex gap-2">
+        <button id="btn-prev" class="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50" disabled>
+          Previous
+        </button>
+        <button id="btn-next" class="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50" disabled>
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 详情弹窗 -->
+  <div id="inquiry-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h3 class="text-lg font-semibold">Inquiry Details</h3>
+        <button id="modal-close" class="text-gray-400 hover:text-gray-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div id="modal-content" class="p-6">
+        <!-- 动态填充 -->
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const API_URL = 'https://xk-truck-api.harry-zhang592802.workers.dev';
+  
+  let currentPage = 1;
+  const pageSize = 20;
+  let totalCount = 0;
+
+  // 加载询盘列表
+  async function loadInquiries() {
+    const status = (document.getElementById('filter-status') as HTMLSelectElement).value;
+    const subject = (document.getElementById('filter-subject') as HTMLSelectElement).value;
+    const search = (document.getElementById('filter-search') as HTMLInputElement).value;
+    
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: pageSize.toString(),
+    });
+    if (status) params.append('status', status);
+    if (subject) params.append('subject', subject);
+    if (search) params.append('search', search);
+
+    try {
+      const res = await fetch(`${API_URL}/api/admin/inquiries?${params}`);
+      const tbody = document.getElementById('inquiries-list');
+      
+      if (!res.ok) {
+        tbody!.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">No inquiries found</td></tr>';
+        return;
+      }
+      
+      const data = await res.json();
+      totalCount = data.total || 0;
+      
+      document.getElementById('total-count')!.textContent = totalCount.toString();
+      document.getElementById('showing-count')!.textContent = (data.inquiries?.length || 0).toString();
+      
+      // 更新分页按钮
+      (document.getElementById('btn-prev') as HTMLButtonElement).disabled = currentPage <= 1;
+      (document.getElementById('btn-next') as HTMLButtonElement).disabled = currentPage * pageSize >= totalCount;
+      
+      if (!data.inquiries || data.inquiries.length === 0) {
+        tbody!.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">No inquiries found</td></tr>';
+        return;
+      }
+      
+      tbody!.innerHTML = data.inquiries.map((inquiry: any) => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-4">
+            <div class="font-medium text-gray-900">${escapeHtml(inquiry.name)}</div>
+            ${inquiry.company ? `<div class="text-sm text-gray-500">${escapeHtml(inquiry.company)}</div>` : ''}
+          </td>
+          <td class="px-6 py-4">
+            <div class="text-sm text-gray-900">${escapeHtml(inquiry.email)}</div>
+            ${inquiry.phone ? `<div class="text-sm text-gray-500">${escapeHtml(inquiry.phone)}</div>` : ''}
+          </td>
+          <td class="px-6 py-4 text-sm">${getSubjectLabel(inquiry.subject)}</td>
+          <td class="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">${escapeHtml(inquiry.message)}</td>
+          <td class="px-6 py-4">
+            <select 
+              class="status-select px-2 py-1 text-xs rounded border ${getStatusClass(inquiry.status)}"
+              data-id="${inquiry.id}"
+              data-current="${inquiry.status}"
+            >
+              <option value="new" ${inquiry.status === 'new' ? 'selected' : ''}>New</option>
+              <option value="contacted" ${inquiry.status === 'contacted' ? 'selected' : ''}>Contacted</option>
+              <option value="quoted" ${inquiry.status === 'quoted' ? 'selected' : ''}>Quoted</option>
+              <option value="closed" ${inquiry.status === 'closed' ? 'selected' : ''}>Closed</option>
+            </select>
+          </td>
+          <td class="px-6 py-4 text-sm text-gray-500">${formatTime(inquiry.created_at)}</td>
+          <td class="px-6 py-4">
+            <button class="btn-view text-primary hover:underline text-sm" data-inquiry='${JSON.stringify(inquiry)}'>
+              View
+            </button>
+          </td>
+        </tr>
+      `).join('');
+      
+      // 绑定事件
+      bindEvents();
+    } catch (error) {
+      console.error('Failed to load inquiries:', error);
+      document.getElementById('inquiries-list')!.innerHTML = 
+        '<tr><td colspan="7" class="px-6 py-8 text-center text-red-500">Failed to load inquiries</td></tr>';
+    }
+  }
+
+  // 绑定事件
+  function bindEvents() {
+    // 查看详情
+    document.querySelectorAll('.btn-view').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const inquiry = JSON.parse((e.target as HTMLElement).dataset.inquiry || '{}');
+        showModal(inquiry);
+      });
+    });
+    
+    // 状态更新
+    document.querySelectorAll('.status-select').forEach(select => {
+      select.addEventListener('change', async (e) => {
+        const target = e.target as HTMLSelectElement;
+        const id = target.dataset.id;
+        const newStatus = target.value;
+        
+        try {
+          await fetch(`${API_URL}/api/admin/inquiries/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+          });
+          target.className = `status-select px-2 py-1 text-xs rounded border ${getStatusClass(newStatus)}`;
+        } catch (error) {
+          console.error('Failed to update status:', error);
+          target.value = target.dataset.current || 'new';
+        }
+      });
+    });
+  }
+
+  // 显示详情弹窗
+  function showModal(inquiry: any) {
+    const modal = document.getElementById('inquiry-modal');
+    const content = document.getElementById('modal-content');
+    
+    content!.innerHTML = `
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm text-gray-500">Name</label>
+            <p class="font-medium">${escapeHtml(inquiry.name)}</p>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500">Company</label>
+            <p class="font-medium">${escapeHtml(inquiry.company || '-')}</p>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500">Email</label>
+            <p class="font-medium">
+              <a href="mailto:${inquiry.email}" class="text-primary hover:underline">${escapeHtml(inquiry.email)}</a>
+            </p>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500">Phone</label>
+            <p class="font-medium">
+              ${inquiry.phone ? `<a href="https://wa.me/${inquiry.phone.replace(/[^0-9]/g, '')}" target="_blank" class="text-green-600 hover:underline">${escapeHtml(inquiry.phone)}</a>` : '-'}
+            </p>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500">Subject</label>
+            <p class="font-medium">${getSubjectLabel(inquiry.subject)}</p>
+          </div>
+          <div>
+            <label class="text-sm text-gray-500">Time</label>
+            <p class="font-medium">${new Date(inquiry.created_at).toLocaleString()}</p>
+          </div>
+        </div>
+        
+        ${inquiry.product_name ? `
+        <div>
+          <label class="text-sm text-gray-500">Product</label>
+          <p class="font-medium">${escapeHtml(inquiry.product_name)}</p>
+        </div>
+        ` : ''}
+        
+        <div>
+          <label class="text-sm text-gray-500">Message</label>
+          <p class="mt-1 p-4 bg-gray-50 rounded-lg whitespace-pre-wrap">${escapeHtml(inquiry.message)}</p>
+        </div>
+        
+        <div class="flex gap-3 pt-4 border-t">
+          <a href="mailto:${inquiry.email}?subject=Re: ${encodeURIComponent(getSubjectLabel(inquiry.subject))}" 
+             class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors">
+            Reply via Email
+          </a>
+          ${inquiry.phone ? `
+          <a href="https://wa.me/${inquiry.phone.replace(/[^0-9]/g, '')}" target="_blank"
+             class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+            Chat on WhatsApp
+          </a>
+          ` : ''}
+        </div>
+      </div>
+    `;
+    
+    modal!.classList.remove('hidden');
+    modal!.classList.add('flex');
+  }
+
+  // 关闭弹窗
+  document.getElementById('modal-close')?.addEventListener('click', () => {
+    const modal = document.getElementById('inquiry-modal');
+    modal!.classList.add('hidden');
+    modal!.classList.remove('flex');
+  });
+
+  document.getElementById('inquiry-modal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+      const modal = document.getElementById('inquiry-modal');
+      modal!.classList.add('hidden');
+      modal!.classList.remove('flex');
+    }
+  });
+
+  // 筛选和分页
+  document.getElementById('filter-status')?.addEventListener('change', () => { currentPage = 1; loadInquiries(); });
+  document.getElementById('filter-subject')?.addEventListener('change', () => { currentPage = 1; loadInquiries(); });
+  document.getElementById('filter-search')?.addEventListener('input', debounce(() => { currentPage = 1; loadInquiries(); }, 500));
+  document.getElementById('btn-refresh')?.addEventListener('click', loadInquiries);
+  document.getElementById('btn-prev')?.addEventListener('click', () => { currentPage--; loadInquiries(); });
+  document.getElementById('btn-next')?.addEventListener('click', () => { currentPage++; loadInquiries(); });
+
+  function debounce(fn: Function, delay: number) {
+    let timer: number;
+    return (...args: any[]) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
+  }
+
+  function escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+  }
+
+  function getSubjectLabel(subject: string): string {
+    const labels: Record<string, string> = {
+      'quote': 'Quote Request',
+      'product': 'Product Inquiry',
+      'wholesale': 'Wholesale',
+      'support': 'Support',
+      'other': 'Other'
+    };
+    return labels[subject] || subject || 'General';
+  }
+
+  function getStatusClass(status: string): string {
+    const classes: Record<string, string> = {
+      'new': 'bg-blue-100 text-blue-800 border-blue-200',
+      'contacted': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'quoted': 'bg-purple-100 text-purple-800 border-purple-200',
+      'closed': 'bg-green-100 text-green-800 border-green-200'
+    };
+    return classes[status] || 'bg-gray-100 text-gray-800 border-gray-200';
+  }
+
+  function formatTime(timestamp: string): string {
+    if (!timestamp) return '-';
+    const date = new Date(timestamp);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // 初始化
+  document.addEventListener('DOMContentLoaded', () => {
+    const checkAndLoad = () => {
+      if (sessionStorage.getItem('xktruck_admin_auth') === 'true') {
+        loadInquiries();
+      } else {
+        setTimeout(checkAndLoad, 500);
+      }
+    };
+    checkAndLoad();
+  });
+</script>

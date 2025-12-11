@@ -6,6 +6,7 @@
 import { handleInquiry } from './handlers/inquiry.js';
 import { handleChat } from './handlers/chat.js';
 import { handleSettings } from './handlers/settings.js';
+import { handleAdmin } from './handlers/admin.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -32,6 +33,9 @@ export default {
       } else if (path === '/api/settings' && request.method === 'PUT') {
         // 更新设置
         response = await handleSettings(request, env, 'PUT');
+      } else if (path.startsWith('/api/admin/')) {
+        // 管理后台 API
+        response = await handleAdmin(request, env, path);
       } else if (path === '/api/health') {
         // 健康检查
         response = new Response(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }), {

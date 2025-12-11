@@ -1,0 +1,241 @@
+---
+/**
+ * 管理后台 - 仪表盘
+ */
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Dashboard" currentPage="dashboard">
+  <!-- 统计卡片 -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <!-- 今日询盘 -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-500">Today's Inquiries</p>
+          <p class="text-3xl font-bold text-gray-900 mt-1" id="stat-today-inquiries">-</p>
+        </div>
+        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+          <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+        </div>
+      </div>
+      <p class="text-sm text-green-600 mt-2">
+        <span id="stat-today-change">+0</span> from yesterday
+      </p>
+    </div>
+
+    <!-- 总询盘数 -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-500">Total Inquiries</p>
+          <p class="text-3xl font-bold text-gray-900 mt-1" id="stat-total-inquiries">-</p>
+        </div>
+        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+          <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+      </div>
+      <p class="text-sm text-gray-500 mt-2">All time</p>
+    </div>
+
+    <!-- 产品数量 -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-500">Products</p>
+          <p class="text-3xl font-bold text-gray-900 mt-1" id="stat-products">-</p>
+        </div>
+        <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+          <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+          </svg>
+        </div>
+      </div>
+      <p class="text-sm text-gray-500 mt-2">Active products</p>
+    </div>
+
+    <!-- AI 状态 -->
+    <div class="bg-white rounded-xl shadow-sm p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-500">AI Assistant</p>
+          <p class="text-xl font-bold mt-1" id="stat-ai-status">
+            <span class="text-gray-400">Loading...</span>
+          </p>
+        </div>
+        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center" id="ai-icon">
+          <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+        </div>
+      </div>
+      <p class="text-sm text-gray-500 mt-2" id="ai-description">Auto-reply status</p>
+    </div>
+  </div>
+
+  <!-- 最近询盘 -->
+  <div class="bg-white rounded-xl shadow-sm">
+    <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+      <h2 class="text-lg font-semibold text-gray-900">Recent Inquiries</h2>
+      <a href="/admin/inquiries" class="text-primary hover:underline text-sm">View all →</a>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+          </tr>
+        </thead>
+        <tbody id="recent-inquiries" class="divide-y divide-gray-200">
+          <tr>
+            <td colspan="5" class="px-6 py-8 text-center text-gray-500">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const API_URL = 'https://xk-truck-api.harry-zhang592802.workers.dev';
+  
+  // 加载统计数据
+  async function loadStats() {
+    try {
+      // 获取 AI 设置
+      const settingsRes = await fetch(`${API_URL}/api/settings`);
+      const settingsData = await settingsRes.json();
+      
+      const aiStatus = document.getElementById('stat-ai-status');
+      const aiIcon = document.getElementById('ai-icon');
+      const aiDesc = document.getElementById('ai-description');
+      
+      if (settingsData.success && settingsData.data.ai_enabled) {
+        aiStatus!.innerHTML = '<span class="text-green-600">Enabled</span>';
+        aiIcon!.className = 'w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center';
+        aiDesc!.textContent = 'AI auto-reply is active';
+      } else {
+        aiStatus!.innerHTML = '<span class="text-gray-500">Disabled</span>';
+        aiDesc!.textContent = 'Manual reply mode';
+      }
+
+      // 获取询盘统计
+      const statsRes = await fetch(`${API_URL}/api/admin/stats`);
+      if (statsRes.ok) {
+        const stats = await statsRes.json();
+        document.getElementById('stat-today-inquiries')!.textContent = stats.todayInquiries || '0';
+        document.getElementById('stat-total-inquiries')!.textContent = stats.totalInquiries || '0';
+        document.getElementById('stat-products')!.textContent = stats.totalProducts || '0';
+      } else {
+        // API 可能还没实现，显示默认值
+        document.getElementById('stat-today-inquiries')!.textContent = '0';
+        document.getElementById('stat-total-inquiries')!.textContent = '0';
+        document.getElementById('stat-products')!.textContent = '0';
+      }
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    }
+  }
+
+  // 加载最近询盘
+  async function loadRecentInquiries() {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/inquiries?limit=5`);
+      const tbody = document.getElementById('recent-inquiries');
+      
+      if (!res.ok) {
+        tbody!.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No inquiries yet</td></tr>';
+        return;
+      }
+      
+      const data = await res.json();
+      
+      if (!data.inquiries || data.inquiries.length === 0) {
+        tbody!.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No inquiries yet</td></tr>';
+        return;
+      }
+      
+      tbody!.innerHTML = data.inquiries.map((inquiry: any) => `
+        <tr class="hover:bg-gray-50">
+          <td class="px-6 py-4 whitespace-nowrap">
+            <div class="font-medium text-gray-900">${escapeHtml(inquiry.name)}</div>
+            ${inquiry.company ? `<div class="text-sm text-gray-500">${escapeHtml(inquiry.company)}</div>` : ''}
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${escapeHtml(inquiry.email)}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${getSubjectLabel(inquiry.subject)}</td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <span class="px-2 py-1 text-xs rounded-full ${getStatusClass(inquiry.status)}">
+              ${inquiry.status || 'new'}
+            </span>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatTime(inquiry.created_at)}</td>
+        </tr>
+      `).join('');
+    } catch (error) {
+      console.error('Failed to load inquiries:', error);
+      document.getElementById('recent-inquiries')!.innerHTML = 
+        '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Failed to load inquiries</td></tr>';
+    }
+  }
+
+  function escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+  }
+
+  function getSubjectLabel(subject: string): string {
+    const labels: Record<string, string> = {
+      'quote': 'Quote Request',
+      'product': 'Product Inquiry',
+      'wholesale': 'Wholesale',
+      'support': 'Support',
+      'other': 'Other'
+    };
+    return labels[subject] || subject || 'General';
+  }
+
+  function getStatusClass(status: string): string {
+    const classes: Record<string, string> = {
+      'new': 'bg-blue-100 text-blue-800',
+      'contacted': 'bg-yellow-100 text-yellow-800',
+      'quoted': 'bg-purple-100 text-purple-800',
+      'closed': 'bg-green-100 text-green-800'
+    };
+    return classes[status] || 'bg-gray-100 text-gray-800';
+  }
+
+  function formatTime(timestamp: string): string {
+    if (!timestamp) return '-';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return date.toLocaleDateString();
+  }
+
+  // 页面加载后执行
+  document.addEventListener('DOMContentLoaded', () => {
+    // 等待登录验证后加载数据
+    const checkAndLoad = () => {
+      if (sessionStorage.getItem('xktruck_admin_auth') === 'true') {
+        loadStats();
+        loadRecentInquiries();
+      } else {
+        setTimeout(checkAndLoad, 500);
+      }
+    };
+    checkAndLoad();
+  });
+</script>
