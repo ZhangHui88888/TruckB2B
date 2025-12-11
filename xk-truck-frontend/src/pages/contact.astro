@@ -1,10 +1,80 @@
 ---
 import Layout from '../layouts/Layout.astro';
+
+// FAQ Schema for Contact page
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is your minimum order quantity (MOQ)?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Our MOQ varies by product. For most items, we can accommodate small trial orders. Contact us for specific product requirements."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you offer samples?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, we provide samples for quality evaluation. Sample costs and shipping are typically charged but can be credited against future orders."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What payment methods do you accept?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We accept T/T (bank transfer), PayPal, and Western Union. For large orders, we can discuss flexible payment terms."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How long is the delivery time?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Standard delivery is 15-30 days depending on order size and destination. Express shipping options are available for urgent orders."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do you provide OEM/ODM services?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, we offer full OEM/ODM services including custom packaging, logo printing, and product modifications to meet your specific requirements."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is your warranty policy?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We provide a 12-month warranty on all products. If any quality issues arise within the warranty period, we will replace the defective parts free of charge."
+      }
+    }
+  ]
+};
+
+// ContactPage Schema
+const contactSchema = {
+  "@context": "https://schema.org",
+  "@type": "ContactPage",
+  "name": "Contact XKTRUCK",
+  "description": "Contact XKTRUCK for heavy truck parts inquiries. Get quotes for VOLVO, SCANIA, MERCEDES-BENZ, MAN parts.",
+  "url": "https://xk-truck.cn/contact",
+  "mainEntity": {
+    "@type": "Organization",
+    "@id": "https://xk-truck.cn/#organization"
+  }
+};
 ---
 
 <Layout 
   title="Contact Us" 
   description="Contact XKTRUCK for heavy truck parts inquiries. Get quotes for VOLVO, SCANIA, MERCEDES-BENZ, MAN parts. WhatsApp: +86 130-6287-0118"
+  schema={[faqSchema, contactSchema]}
 >
   <!-- Hero Section -->
   <section class="bg-gray-900 text-white py-12">

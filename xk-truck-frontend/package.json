@@ -7,7 +7,9 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "sync:products": "node scripts/sync-products-simple.js"
+    "sync:products": "node scripts/sync-products-simple.js",
+    "seo:update": "node scripts/seo-auto-update.js",
+    "seo:submit-sitemap": "node scripts/submit-sitemap.js"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.6.0",

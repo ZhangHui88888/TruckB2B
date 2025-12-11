@@ -1,6 +1,19 @@
 ---
 import Layout from '../layouts/Layout.astro';
 
+// AboutPage Schema
+const aboutSchema = {
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  "name": "About XKTRUCK",
+  "description": "XKTRUCK - Professional heavy truck parts manufacturer with 35,000㎡ factory in China. OEM quality parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, and more.",
+  "url": "https://xk-truck.cn/about",
+  "mainEntity": {
+    "@type": "Organization",
+    "@id": "https://xk-truck.cn/#organization"
+  }
+};
+
 const stats = [
   { value: '35,000㎡', label: 'Factory Area' },
   { value: '8+', label: 'Brands Covered' },
@@ -19,6 +32,7 @@ const certifications = [
 <Layout 
   title="About Us" 
   description="XKTRUCK - Professional heavy truck parts manufacturer with 35,000㎡ factory in China. OEM quality parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, and more."
+  schema={aboutSchema}
 >
   <!-- Hero Section -->
   <section class="bg-gray-900 text-white py-16 md:py-24">

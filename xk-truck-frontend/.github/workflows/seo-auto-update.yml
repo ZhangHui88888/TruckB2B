@@ -1,0 +1,82 @@
+# SEO Auto Update Workflow
+# 
+# This workflow runs weekly to:
+# 1. Fetch search performance data from Google Search Console
+# 2. Analyze keywords with AI to find optimization opportunities
+# 3. Update SEO metadata in Supabase
+# 4. Trigger Cloudflare Pages rebuild
+# 5. Send a weekly SEO report via email
+#
+# Required secrets:
+# - GSC_CREDENTIALS: Google Cloud service account JSON (for GSC API)
+# - GSC_SITE_URL: Site URL (e.g., https://xk-truck.cn)
+# - SUPABASE_URL: Supabase project URL
+# - SUPABASE_KEY: Supabase service role key
+# - DEEPSEEK_API_KEY: DeepSeek API key for AI analysis
+# - RESEND_API_KEY: Resend API key for email notifications
+# - NOTIFY_EMAIL: Email to receive SEO reports
+# - CF_DEPLOY_HOOK: Cloudflare Pages deploy hook URL (optional)
+
+name: SEO Auto Update
+
+on:
+  schedule:
+    # Run every Monday at 1:00 UTC (9:00 Beijing Time)
+    - cron: '0 1 * * 1'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      skip_deploy:
+        description: 'Skip Cloudflare Pages rebuild'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  seo-update:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: xk-truck-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: xk-truck-frontend
+        run: |
+          npm install googleapis @supabase/supabase-js resend
+
+      - name: Run SEO Analysis
+        working-directory: xk-truck-frontend
+        env:
+          GSC_CREDENTIALS: ${{ secrets.GSC_CREDENTIALS }}
+          GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+        run: node scripts/seo-auto-update.js
+
+      - name: Trigger Cloudflare Pages Build
+        if: ${{ github.event.inputs.skip_deploy != 'true' && secrets.CF_DEPLOY_HOOK != '' }}
+        run: |
+          echo "Triggering Cloudflare Pages rebuild..."
+          curl -X POST "${{ secrets.CF_DEPLOY_HOOK }}" || echo "Deploy hook not configured or failed"
+
+      - name: Summary
+        run: |
+          echo "## SEO Auto Update Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "- **Site**: xk-truck.cn" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check your email for the detailed SEO report." >> $GITHUB_STEP_SUMMARY

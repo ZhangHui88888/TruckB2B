@@ -71,11 +71,120 @@ const { product } = Astro.props as { product: Product };
 if (!product) {
   return Astro.redirect('/products');
 }
+
+// Enhanced Product Schema.org structured data
+const productSchema = {
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": product.name,
+  "image": product.images && product.images.length > 0 
+    ? product.images 
+    : [product.main_image_url || "https://xk-truck.cn/images/placeholder.jpg"],
+  "description": product.description || product.short_description || `${product.name} - OEM quality aftermarket part`,
+  "sku": product.sku || product.oe_number,
+  "mpn": product.oe_number,
+  "gtin": product.oe_number,
+  "brand": {
+    "@type": "Brand",
+    "name": product.brand_name || "XKTRUCK"
+  },
+  "manufacturer": {
+    "@type": "Organization",
+    "@id": "https://xk-truck.cn/#organization"
+  },
+  "category": product.category_name,
+  "material": product.specifications?.Material || product.specifications?.['Material'],
+  "additionalProperty": [
+    ...(product.fitment ? product.fitment.map((fit: string) => ({
+      "@type": "PropertyValue",
+      "name": "Compatible Vehicle",
+      "value": fit
+    })) : []),
+    ...(product.cross_reference ? product.cross_reference.map((ref: string) => ({
+      "@type": "PropertyValue", 
+      "name": "Cross Reference",
+      "value": ref
+    })) : []),
+    ...(product.specifications ? Object.entries(product.specifications).map(([key, value]) => ({
+      "@type": "PropertyValue",
+      "name": key,
+      "value": value
+    })) : [])
+  ],
+  "offers": {
+    "@type": "Offer",
+    "url": `https://xk-truck.cn/products/${product.slug}`,
+    "priceCurrency": "USD",
+    "price": "0",
+    "priceValidUntil": new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    "availability": "https://schema.org/InStock",
+    "itemCondition": "https://schema.org/NewCondition",
+    "seller": {
+      "@type": "Organization",
+      "@id": "https://xk-truck.cn/#organization"
+    },
+    "shippingDetails": {
+      "@type": "OfferShippingDetails",
+      "shippingDestination": {
+        "@type": "DefinedRegion",
+        "addressCountry": "Worldwide"
+      },
+      "deliveryTime": {
+        "@type": "ShippingDeliveryTime",
+        "handlingTime": {
+          "@type": "QuantitativeValue",
+          "minValue": 1,
+          "maxValue": 3,
+          "unitCode": "DAY"
+        },
+        "transitTime": {
+          "@type": "QuantitativeValue",
+          "minValue": 15,
+          "maxValue": 30,
+          "unitCode": "DAY"
+        }
+      }
+    }
+  }
+};
+
+// BreadcrumbList Schema
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://xk-truck.cn"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Products",
+      "item": "https://xk-truck.cn/products"
+    },
+    ...(product.brand_name ? [{
+      "@type": "ListItem",
+      "position": 3,
+      "name": product.brand_name,
+      "item": `https://xk-truck.cn/products?brand=${product.brand_slug}`
+    }] : []),
+    {
+      "@type": "ListItem",
+      "position": product.brand_name ? 4 : 3,
+      "name": product.name,
+      "item": `https://xk-truck.cn/products/${product.slug}`
+    }
+  ]
+};
 ---
 
 <Layout 
   title={product.name}
   description={`${product.name} - OE: ${product.oe_number}. ${(product.description || '').slice(0, 150)}...`}
+  schema={[productSchema, breadcrumbSchema]}
 >
   <div class="container mx-auto px-4 py-8">
     <!-- Breadcrumb -->
@@ -268,29 +377,4 @@ if (!product) {
     )}
   </div>
 
-  <!-- Schema.org Product structured data -->
-  <script type="application/ld+json" set:html={JSON.stringify({
-    "@context": "https://schema.org",
-    "@type": "Product",
-    "name": product.name,
-    "image": product.main_image_url || `https://xk-truck.cn/images/placeholder.jpg`,
-    "description": product.description || product.short_description,
-    "brand": {
-      "@type": "Brand",
-      "name": product.brand_name
-    },
-    "sku": product.oe_number,
-    "mpn": product.oe_number,
-    "category": product.category_name,
-    "offers": {
-      "@type": "Offer",
-      "priceCurrency": "USD",
-      "price": "Contact for price",
-      "availability": "https://schema.org/InStock",
-      "seller": {
-        "@type": "Organization",
-        "name": "XKTRUCK"
-      }
-    }
-  })} />
 </Layout>

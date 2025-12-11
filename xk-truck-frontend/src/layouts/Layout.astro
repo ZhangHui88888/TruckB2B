@@ -9,14 +9,72 @@ interface Props {
   description?: string;
   image?: string;
   canonical?: string;
+  schema?: object | object[];
 }
 
 const { 
   title, 
   description = 'Professional heavy truck parts supplier - VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD. OEM quality, competitive prices, global shipping.',
   image = '/images/og-image.jpg',
-  canonical
+  canonical,
+  schema
 } = Astro.props;
+
+// Global Organization Schema (appears on all pages)
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": "https://xk-truck.cn/#organization",
+  "name": "XKTRUCK",
+  "alternateName": "XKLAMP",
+  "url": "https://xk-truck.cn",
+  "logo": {
+    "@type": "ImageObject",
+    "url": "https://xk-truck.cn/images/logo.png",
+    "width": 200,
+    "height": 60
+  },
+  "description": "Professional heavy truck parts manufacturer - headlamps, mirrors, and exterior parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD. 35,000㎡ factory in China.",
+  "foundingDate": "2010",
+  "areaServed": "Worldwide",
+  "numberOfEmployees": {
+    "@type": "QuantitativeValue",
+    "minValue": 100,
+    "maxValue": 500
+  },
+  "address": {
+    "@type": "PostalAddress",
+    "addressCountry": "CN",
+    "addressRegion": "China"
+  },
+  "contactPoint": [
+    {
+      "@type": "ContactPoint",
+      "telephone": "+86-130-6287-0118",
+      "contactType": "sales",
+      "availableLanguage": ["English", "Chinese"]
+    },
+    {
+      "@type": "ContactPoint",
+      "email": "harry.zhang592802@gmail.com",
+      "contactType": "customer service"
+    }
+  ],
+  "sameAs": []
+};
+
+// WebSite Schema for search box
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://xk-truck.cn/#website",
+  "url": "https://xk-truck.cn",
+  "name": "XKTRUCK - Heavy Truck Parts Supplier",
+  "description": description,
+  "publisher": {
+    "@id": "https://xk-truck.cn/#organization"
+  }
+};
 
 const siteUrl = 'https://xk-truck.cn';
 const canonicalUrl = canonical || new URL(Astro.url.pathname, siteUrl).href;
@@ -56,6 +114,17 @@ const canonicalUrl = canonical || new URL(Astro.url.pathname, siteUrl).href;
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    
+    <!-- Global Schema.org structured data -->
+    <script type="application/ld+json" set:html={JSON.stringify(organizationSchema)} />
+    <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
+    
+    <!-- Page-specific Schema.org structured data -->
+    {schema && (
+      Array.isArray(schema) 
+        ? schema.map(s => <script type="application/ld+json" set:html={JSON.stringify(s)} />)
+        : <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+    )}
   </head>
   <body class="min-h-screen flex flex-col bg-gray-50">
     <Header />
