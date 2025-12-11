@@ -1,6 +1,77 @@
 # AI 客服和询盘功能部署记录
 
-> 部署时间：2025-12-11
+> 部署时间：2025-12-11 10:00-10:13
+
+---
+
+## 部署过程记录
+
+### 1. 安装 Wrangler CLI
+```bash
+# 解除 PowerShell 执行策略限制
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
+# 全局安装 wrangler
+npm install -g wrangler
+```
+
+### 2. 安装项目依赖
+```bash
+cd d:\github\funNovels\TruckB2B\xk-truck-worker
+npm install
+```
+
+### 3. 登录 Cloudflare
+```bash
+wrangler login
+# 浏览器打开授权页面，点击 Allow 授权
+```
+
+### 4. 配置 Secrets
+```bash
+# Supabase URL
+echo https://xktruck.supabase.co | wrangler secret put SUPABASE_URL
+# 提示创建新 Worker，输入 Y 确认
+
+# Supabase Service Key
+echo sb_secret_CUSHbAvZlq7M-4OJgXby6g_cEV5aYHd | wrangler secret put SUPABASE_SERVICE_KEY
+
+# DeepSeek API Key
+echo sk-e1cb78491f84483fbf9e550f7321603b | wrangler secret put DEEPSEEK_API_KEY
+
+# Resend API Key
+echo re_jf9cgopc_LXyEDqAR7tPjxmEYRti8nazh | wrangler secret put RESEND_API_KEY
+
+# 通知邮箱
+echo harry.zhang592802@gmail.com | wrangler secret put NOTIFY_EMAIL
+
+# 管理密钥
+echo xktruck_admin_2024_secure | wrangler secret put ADMIN_API_KEY
+```
+
+### 5. 部署 Worker
+```bash
+npm run deploy
+# 输出: https://xk-truck-api.harry-zhang592802.workers.dev
+```
+
+### 6. 验证部署
+```bash
+curl https://xk-truck-api.harry-zhang592802.workers.dev/api/health
+# 返回: {"status":"ok","timestamp":"2025-12-11T02:08:08.745Z"}
+```
+
+### 7. 创建数据库表
+在 Supabase SQL Editor 中执行 `xk-truck-worker/sql/create_tables.sql`
+- 先启用 pgvector 扩展
+- 创建 inquiries、conversations、settings、knowledge_base 表
+
+### 8. 推送代码到 GitHub
+```bash
+git add -A
+git commit -m "feat: 添加AI客服和询盘功能"
+git push
+```
 
 ---
 
