@@ -1,6 +1,9 @@
 # Compiled class file
 *.class
 
+# 敏感信息文件
+账号密钥汇总.md
+
 # Log file
 *.log
 
