@@ -240,6 +240,113 @@ wrangler secret put SECRET_NAME
 
 ---
 
+---
+
+# 管理后台部署记录
+
+> 部署时间：2025-12-11 10:14-10:22
+
+## 新增页面
+
+| 路由 | 功能 |
+|------|------|
+| `/admin` | 登录页面 |
+| `/admin/dashboard` | 仪表盘 - 询盘统计、AI 状态 |
+| `/admin/inquiries` | 询盘列表 - 筛选、状态更新、详情查看 |
+| `/admin/products` | 产品管理 - 列表、搜索、同步按钮 |
+| `/admin/conversations` | 对话记录 - 会话列表、消息详情 |
+| `/admin/settings` | 系统设置 - AI 开关、欢迎语、通知配置 |
+
+## 登录信息
+
+- **访问地址：** `https://xk-truck.cn/admin`
+- **登录密码：** `xktruck2024`
+
+## 新增文件
+
+### 前端页面
+```
+xk-truck-frontend/src/
+├── layouts/
+│   └── AdminLayout.astro      # 后台布局（侧边栏导航）
+└── pages/admin/
+    ├── index.astro            # 入口重定向
+    ├── dashboard.astro        # 仪表盘
+    ├── inquiries.astro        # 询盘管理
+    ├── products.astro         # 产品管理
+    ├── conversations.astro    # 对话记录
+    └── settings.astro         # 系统设置
+```
+
+### Worker API
+```
+xk-truck-worker/src/handlers/
+└── admin.js                   # 后台 API
+```
+
+## 后台 API 接口
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/admin/stats` | GET | 获取统计数据 |
+| `/api/admin/inquiries` | GET | 获取询盘列表 |
+| `/api/admin/inquiries/:id` | PUT | 更新询盘状态 |
+| `/api/admin/conversations/sessions` | GET | 获取会话列表 |
+| `/api/admin/conversations/:sessionId` | GET | 获取会话详情 |
+
+## 功能说明
+
+### 1. 仪表盘
+- 今日询盘数量
+- 总询盘数量
+- 产品数量
+- AI 客服状态
+- 最近询盘列表
+
+### 2. 询盘管理
+- 按状态筛选（new/contacted/quoted/closed）
+- 按主题筛选
+- 搜索（姓名、邮箱）
+- 更新询盘状态
+- 查看详情弹窗
+- 快速回复（邮件/WhatsApp）
+
+### 3. 产品管理
+- 产品列表展示
+- 按品牌筛选
+- 搜索产品
+- 一键同步按钮（从 xklamp.com）
+- 产品统计
+
+### 4. 对话记录
+- 会话列表
+- 消息详情
+- 区分用户消息和 AI 回复
+- 统计（总会话、总消息、AI 回复数）
+
+### 5. 系统设置
+- AI 自动回复开关
+- 欢迎消息配置
+- AI 系统提示词配置
+- 通知邮箱配置
+- 通知开关
+
+## 部署命令
+
+```bash
+# 更新 Worker
+cd d:\github\funNovels\TruckB2B\xk-truck-worker
+npm run deploy
+
+# 推送代码
+cd d:\github\funNovels\TruckB2B
+git add -A
+git commit -m "feat: 添加管理后台"
+git push
+```
+
+---
+
 ## 七、测试命令
 
 ### 健康检查
