@@ -1,14 +1,24 @@
 /**
  * Supabase 客户端配置
  */
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // 从环境变量获取配置
 const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || 'https://xktruck.supabase.co';
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 
-// 创建 Supabase 客户端
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// 创建 Supabase 客户端（如果没有 key 则创建一个 mock 客户端）
+let supabase: SupabaseClient;
+
+if (supabaseAnonKey) {
+  supabase = createClient(supabaseUrl, supabaseAnonKey);
+} else {
+  // 构建时没有环境变量，创建一个占位客户端
+  // Cloudflare Pages 构建时会有正确的环境变量
+  supabase = createClient(supabaseUrl, 'placeholder-key-for-build');
+}
+
+export { supabase };
 
 // =====================================================
 // 类型定义
