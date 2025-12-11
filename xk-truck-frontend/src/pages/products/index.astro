@@ -133,7 +133,23 @@ const sampleProducts: Product[] = [
 ];
 
 // 使用数据库数据或示例数据
-const displayProducts = products.length > 0 ? products : sampleProducts;
+let displayProducts = products.length > 0 ? products : sampleProducts;
+
+// 如果使用示例数据，也需要应用筛选
+if (products.length === 0) {
+  displayProducts = sampleProducts.filter(p => {
+    if (brandFilter && p.brand_slug !== brandFilter) return false;
+    if (categoryFilter && p.category_slug !== categoryFilter) return false;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchName = p.name.toLowerCase().includes(query);
+      const matchOE = p.oe_number?.toLowerCase().includes(query);
+      const matchDesc = p.short_description?.toLowerCase().includes(query);
+      if (!matchName && !matchOE && !matchDesc) return false;
+    }
+    return true;
+  });
+}
 const displayBrands = brands.length > 0 ? brands : ['VOLVO', 'SCANIA', 'MERCEDES-BENZ', 'MAN', 'IVECO', 'RENAULT', 'DAF', 'FORD'];
 const displayCategories = categories.length > 0 ? categories : ['Headlamps', 'Mirrors', 'Body Parts', 'Lighting', 'Grilles', 'Bumpers'];
 

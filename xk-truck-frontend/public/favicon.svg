@@ -1,4 +1,75 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="8" fill="#1e40af"/>
-  <text x="32" y="42" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="white" text-anchor="middle">XK</text>
+  <defs>
+    <!-- 背景：深黑红 -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a0a0a"/>
+      <stop offset="100%" stop-color="#2d1515"/>
+    </linearGradient>
+    <!-- 左灯光束：金色 -->
+    <linearGradient id="leftBeam" x1="100%" y1="0%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="30%" stop-color="#fcd34d"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </linearGradient>
+    <!-- 右灯光束：金色 -->
+    <linearGradient id="rightBeam" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="30%" stop-color="#fcd34d"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
+    </linearGradient>
+    <!-- 灯光发光效果 -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- 背景 -->
+  <rect width="64" height="64" rx="12" fill="url(#bg)"/>
+  
+  <!-- 左侧强光束 -->
+  <polygon points="6,42 0,36 0,56 6,50" fill="url(#leftBeam)" opacity="0.9"/>
+  <polygon points="6,44 2,40 2,52 6,48" fill="url(#leftBeam)" opacity="0.5"/>
+  
+  <!-- 右侧强光束 -->
+  <polygon points="58,42 64,36 64,56 58,50" fill="url(#rightBeam)" opacity="0.9"/>
+  <polygon points="58,44 62,40 62,52 58,48" fill="url(#rightBeam)" opacity="0.5"/>
+  
+  <!-- 驾驶室外框 -->
+  <rect x="8" y="6" width="48" height="24" rx="4" fill="#7f1d1d" stroke="#991b1b" stroke-width="2"/>
+  
+  <!-- 挡风玻璃（大而明显，带蓝色反光） -->
+  <rect x="12" y="10" width="40" height="16" rx="2" fill="#0c4a6e"/>
+  <rect x="14" y="12" width="16" height="12" rx="1" fill="#0369a1" opacity="0.4"/>
+  
+  <!-- 车头/格栅区域 -->
+  <rect x="6" y="32" width="52" height="24" rx="3" fill="#7f1d1d" stroke="#991b1b" stroke-width="1"/>
+  
+  <!-- 格栅（中间） -->
+  <rect x="20" y="36" width="24" height="14" rx="2" fill="#292524"/>
+  <rect x="22" y="39" width="20" height="2" rx="1" fill="#44403c"/>
+  <rect x="22" y="44" width="20" height="2" rx="1" fill="#44403c"/>
+  
+  <!-- 左大灯 -->
+  <rect x="7" y="38" width="11" height="10" rx="2" fill="#fef3c7" filter="url(#glow)"/>
+  <rect x="9" y="40" width="7" height="6" rx="1" fill="#ffffff"/>
+  
+  <!-- 右大灯 -->
+  <rect x="46" y="38" width="11" height="10" rx="2" fill="#fef3c7" filter="url(#glow)"/>
+  <rect x="48" y="40" width="7" height="6" rx="1" fill="#ffffff"/>
+  
+  <!-- XK 文字（金色车标） -->
+  <text x="32" y="48" 
+        font-family="system-ui, -apple-system, sans-serif" 
+        font-size="10" 
+        font-weight="900" 
+        fill="#fcd34d" 
+        text-anchor="middle"
+        letter-spacing="1">XK</text>
+  
+  <!-- 保险杠 -->
+  <rect x="8" y="54" width="48" height="4" rx="2" fill="#44403c"/>
 </svg>
