@@ -7,6 +7,7 @@ import { handleInquiry } from './handlers/inquiry.js';
 import { handleChat } from './handlers/chat.js';
 import { handleSettings } from './handlers/settings.js';
 import { handleAdmin } from './handlers/admin.js';
+import { handleWhatsApp, getWhatsAppConversations, getConversationMessages } from './handlers/whatsapp.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -36,6 +37,22 @@ export default {
       } else if (path.startsWith('/api/admin/')) {
         // 管理后台 API
         response = await handleAdmin(request, env, path);
+      } else if (path === '/api/whatsapp/webhook') {
+        // WhatsApp Webhook（GET 验证 / POST 消息）
+        response = await handleWhatsApp(request, env, path);
+      } else if (path === '/api/whatsapp/conversations' && request.method === 'GET') {
+        // 获取 WhatsApp 对话列表
+        const conversations = await getWhatsAppConversations(env);
+        response = new Response(JSON.stringify({ success: true, data: conversations }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } else if (path.match(/^\/api\/whatsapp\/conversations\/[\w-]+\/messages$/) && request.method === 'GET') {
+        // 获取对话消息
+        const conversationId = path.split('/')[4];
+        const messages = await getConversationMessages(env, conversationId);
+        response = new Response(JSON.stringify({ success: true, data: messages }), {
+          headers: { 'Content-Type': 'application/json' }
+        });
       } else if (path === '/api/health') {
         // 健康检查
         response = new Response(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }), {

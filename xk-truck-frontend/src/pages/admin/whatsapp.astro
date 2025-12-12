@@ -1,0 +1,309 @@
+---
+/**
+ * 管理后台 - WhatsApp 对话管理
+ */
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="WhatsApp Conversations" currentPage="whatsapp">
+  <!-- 状态提示 -->
+  <div id="config-warning" class="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
+    <div class="flex items-start gap-3">
+      <svg class="w-5 h-5 text-yellow-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+      </svg>
+      <div>
+        <h3 class="font-medium text-yellow-800">WhatsApp API Not Configured</h3>
+        <p class="text-sm text-yellow-700 mt-1">
+          WhatsApp Business API credentials are not yet configured. Once configured, you'll be able to view and manage WhatsApp conversations here.
+        </p>
+        <p class="text-sm text-yellow-700 mt-2">
+          See <code class="bg-yellow-100 px-1 rounded">WhatsApp-API配置指南.md</code> for setup instructions.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 统计 -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm p-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Total Conversations</p>
+          <p class="text-2xl font-bold text-gray-900" id="stat-conversations">0</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Total Messages</p>
+          <p class="text-2xl font-bold text-blue-600" id="stat-messages">0</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">AI Responses</p>
+          <p class="text-2xl font-bold text-purple-600" id="stat-ai">0</p>
+        </div>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm p-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-sm text-gray-500">Active (24h)</p>
+          <p class="text-2xl font-bold text-orange-600" id="stat-active">0</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- 对话列表 -->
+    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <h3 class="font-semibold text-gray-900">Conversations</h3>
+        <button id="btn-refresh" class="text-sm text-primary hover:underline">Refresh</button>
+      </div>
+      <div id="conversations-list" class="divide-y divide-gray-100 max-h-[600px] overflow-y-auto">
+        <div class="px-4 py-8 text-center text-gray-500">
+          <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+          <p>No WhatsApp conversations yet</p>
+          <p class="text-sm mt-1">Conversations will appear here once WhatsApp API is configured</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 对话详情 -->
+    <div class="lg:col-span-2 bg-white rounded-xl shadow-sm overflow-hidden">
+      <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <div>
+          <h3 class="font-semibold text-gray-900" id="contact-name">Select a conversation</h3>
+          <p class="text-sm text-gray-500" id="contact-phone"></p>
+        </div>
+        <div id="conversation-actions" class="hidden">
+          <button class="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 rounded border border-gray-200">
+            Archive
+          </button>
+        </div>
+      </div>
+      <div id="messages-container" class="p-4 max-h-[500px] overflow-y-auto bg-gray-50">
+        <div class="text-center text-gray-500 py-12">
+          <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          </svg>
+          <p>Select a conversation to view messages</p>
+        </div>
+      </div>
+      <!-- 回复输入框（未来功能） -->
+      <div class="px-4 py-3 border-t border-gray-200 bg-gray-50">
+        <div class="flex gap-2">
+          <input 
+            type="text" 
+            id="reply-input"
+            placeholder="Type a message... (coming soon)"
+            class="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm"
+            disabled
+          />
+          <button 
+            id="btn-send"
+            class="px-4 py-2 bg-green-500 text-white rounded-lg text-sm opacity-50 cursor-not-allowed"
+            disabled
+          >
+            Send
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  const API_URL = 'https://xk-truck-api.harry-zhang592802.workers.dev';
+  
+  let selectedConversation: string | null = null;
+
+  // 加载对话列表
+  async function loadConversations() {
+    try {
+      const res = await fetch(`${API_URL}/api/whatsapp/conversations`);
+      const listDiv = document.getElementById('conversations-list');
+      
+      if (!res.ok) {
+        // API 未配置或出错
+        return;
+      }
+      
+      const data = await res.json();
+      
+      if (!data.data || data.data.length === 0) {
+        return;
+      }
+      
+      // 隐藏配置警告
+      document.getElementById('config-warning')?.classList.add('hidden');
+      
+      // 更新统计
+      document.getElementById('stat-conversations')!.textContent = data.data.length.toString();
+      
+      listDiv!.innerHTML = data.data.map((conv: any) => `
+        <button
+          class="conversation-item w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors ${selectedConversation === conv.id ? 'bg-green-50 border-l-4 border-green-500' : ''}"
+          data-id="${conv.id}"
+          data-name="${conv.contact_name || 'Unknown'}"
+          data-phone="${conv.phone_number}"
+        >
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <span class="text-green-600 font-medium">${(conv.contact_name || 'U').charAt(0).toUpperCase()}</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between">
+                <span class="font-medium text-gray-900 truncate">${conv.contact_name || 'Unknown'}</span>
+                <span class="text-xs text-gray-500">${formatTime(conv.last_message_at)}</span>
+              </div>
+              <p class="text-sm text-gray-500 truncate">${conv.last_message || 'No messages'}</p>
+            </div>
+          </div>
+        </button>
+      `).join('');
+      
+      // 绑定点击事件
+      document.querySelectorAll('.conversation-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          const el = e.currentTarget as HTMLElement;
+          selectConversation(el.dataset.id!, el.dataset.name!, el.dataset.phone!);
+        });
+      });
+    } catch (error) {
+      console.error('Failed to load conversations:', error);
+    }
+  }
+
+  // 选择对话
+  async function selectConversation(id: string, name: string, phone: string) {
+    selectedConversation = id;
+    
+    document.getElementById('contact-name')!.textContent = name;
+    document.getElementById('contact-phone')!.textContent = phone;
+    document.getElementById('conversation-actions')?.classList.remove('hidden');
+    
+    // 更新选中状态
+    document.querySelectorAll('.conversation-item').forEach(item => {
+      if ((item as HTMLElement).dataset.id === id) {
+        item.classList.add('bg-green-50', 'border-l-4', 'border-green-500');
+      } else {
+        item.classList.remove('bg-green-50', 'border-l-4', 'border-green-500');
+      }
+    });
+    
+    // 加载消息
+    await loadMessages(id);
+  }
+
+  // 加载消息
+  async function loadMessages(conversationId: string) {
+    const container = document.getElementById('messages-container');
+    container!.innerHTML = '<div class="text-center text-gray-500 py-12">Loading...</div>';
+    
+    try {
+      const res = await fetch(`${API_URL}/api/whatsapp/conversations/${conversationId}/messages`);
+      
+      if (!res.ok) {
+        container!.innerHTML = '<div class="text-center text-gray-500 py-12">No messages found</div>';
+        return;
+      }
+      
+      const data = await res.json();
+      
+      if (!data.data || data.data.length === 0) {
+        container!.innerHTML = '<div class="text-center text-gray-500 py-12">No messages found</div>';
+        return;
+      }
+      
+      container!.innerHTML = `
+        <div class="space-y-4">
+          ${data.data.map((msg: any) => `
+            <div class="flex ${msg.direction === 'incoming' ? 'justify-start' : 'justify-end'}">
+              <div class="max-w-[80%] ${msg.direction === 'incoming' ? 'bg-white shadow-sm' : 'bg-green-500 text-white'} rounded-2xl px-4 py-3">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-xs ${msg.direction === 'incoming' ? 'text-gray-500' : 'text-white/70'}">
+                    ${msg.direction === 'incoming' ? 'Customer' : (msg.is_ai_response ? 'AI Assistant' : 'You')}
+                  </span>
+                  ${msg.is_ai_response ? '<span class="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">AI</span>' : ''}
+                </div>
+                <p class="text-sm whitespace-pre-wrap">${escapeHtml(msg.content)}</p>
+                <p class="text-xs ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-white/50'} mt-1">
+                  ${formatTime(msg.created_at)}
+                </p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      
+      // 滚动到底部
+      container!.scrollTop = container!.scrollHeight;
+    } catch (error) {
+      console.error('Failed to load messages:', error);
+      container!.innerHTML = '<div class="text-center text-red-500 py-12">Failed to load messages</div>';
+    }
+  }
+
+  function escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
+  }
+
+  function formatTime(timestamp: string): string {
+    if (!timestamp) return '-';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // 事件绑定
+  document.getElementById('btn-refresh')?.addEventListener('click', loadConversations);
+
+  // 初始化
+  document.addEventListener('DOMContentLoaded', () => {
+    const checkAndLoad = () => {
+      if (sessionStorage.getItem('xktruck_admin_auth') === 'true') {
+        loadConversations();
+      } else {
+        setTimeout(checkAndLoad, 500);
+      }
+    };
+    checkAndLoad();
+  });
+</script>

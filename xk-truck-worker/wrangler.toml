@@ -20,3 +20,8 @@ vars = { CORS_ORIGIN = "*" }
 # - DEEPSEEK_API_KEY
 # - RESEND_API_KEY
 # - NOTIFY_EMAIL
+#
+# WhatsApp Business API 密钥（待配置）：
+# - WHATSAPP_PHONE_NUMBER_ID   # Meta 商业账号电话号码 ID
+# - WHATSAPP_ACCESS_TOKEN      # Meta Graph API 访问令牌
+# - WHATSAPP_VERIFY_TOKEN      # Webhook 验证令牌（自定义字符串，如：xktruck_webhook_2024）
