@@ -41,9 +41,95 @@ const categories = [
   { name: 'Body Parts', image: '/images/categories/body-parts.jpg', count: 200 },
   { name: 'Lighting', image: '/images/categories/lighting.jpg', count: 150 },
 ];
+
+// Homepage WebPage Schema
+const homePageSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "@id": "https://xk-truck.cn/#webpage",
+  "url": "https://xk-truck.cn",
+  "name": "XKTRUCK - Professional Heavy Truck Parts Supplier",
+  "description": "Professional heavy truck parts supplier - VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD. OEM quality, competitive prices, global shipping.",
+  "isPartOf": {
+    "@id": "https://xk-truck.cn/#website"
+  },
+  "about": {
+    "@id": "https://xk-truck.cn/#organization"
+  },
+  "primaryImageOfPage": {
+    "@type": "ImageObject",
+    "url": "https://xk-truck.cn/images/og-image.jpg"
+  }
+};
+
+// LocalBusiness Schema (for B2B visibility)
+const localBusinessSchema = {
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "@id": "https://xk-truck.cn/#localbusiness",
+  "name": "XKTRUCK",
+  "alternateName": "XKLAMP",
+  "description": "Professional heavy truck parts manufacturer - headlamps, mirrors, and exterior parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD.",
+  "url": "https://xk-truck.cn",
+  "telephone": "+86-130-6287-0118",
+  "email": "harry.zhang592802@gmail.com",
+  "address": {
+    "@type": "PostalAddress",
+    "addressCountry": "CN"
+  },
+  "geo": {
+    "@type": "GeoCoordinates",
+    "latitude": "31.2304",
+    "longitude": "121.4737"
+  },
+  "openingHoursSpecification": [
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+      "opens": "09:00",
+      "closes": "18:00"
+    },
+    {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": "Saturday",
+      "opens": "09:00",
+      "closes": "12:00"
+    }
+  ],
+  "priceRange": "$$",
+  "currenciesAccepted": "USD",
+  "paymentAccepted": "Bank Transfer, PayPal, Western Union",
+  "areaServed": "Worldwide",
+  "hasOfferCatalog": {
+    "@type": "OfferCatalog",
+    "name": "Heavy Truck Parts",
+    "itemListElement": [
+      {
+        "@type": "OfferCatalog",
+        "name": "Headlamps",
+        "itemListElement": [
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "VOLVO Headlamps" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "SCANIA Headlamps" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "MERCEDES-BENZ Headlamps" } }
+        ]
+      },
+      {
+        "@type": "OfferCatalog",
+        "name": "Mirrors",
+        "itemListElement": [
+          { "@type": "Offer", "itemOffered": { "@type": "Product", "name": "Truck Mirrors" } }
+        ]
+      }
+    ]
+  }
+};
 ---
 
-<Layout title="Heavy Truck Parts Supplier">
+<Layout 
+  title="Heavy Truck Parts Supplier" 
+  description="Professional heavy truck parts supplier - VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD. OEM quality headlamps, mirrors, body parts. Factory direct pricing, global shipping."
+  schema={[homePageSchema, localBusinessSchema]}
+>
   <!-- Hero Section -->
   <section class="relative bg-gradient-to-br from-gray-900 via-gray-800 to-primary text-white">
     <div class="absolute inset-0 bg-black/30"></div>

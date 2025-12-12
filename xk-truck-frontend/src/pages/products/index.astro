@@ -181,11 +181,52 @@ function buildPageUrl(page: number) {
   params.set('page', page.toString());
   return `/products?${params.toString()}`;
 }
+
+// ItemList Schema for product listing
+const itemListSchema = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": brandFilter 
+    ? `${brandFilter.toUpperCase()} Truck Parts` 
+    : categoryFilter 
+      ? `${categoryFilter} for Heavy Trucks`
+      : "Heavy Truck Parts Catalog",
+  "description": "Browse our complete range of aftermarket truck parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD.",
+  "numberOfItems": totalProducts || displayProducts.length,
+  "itemListElement": displayProducts.slice(0, 20).map((product, index) => ({
+    "@type": "ListItem",
+    "position": (currentPage - 1) * pageSize + index + 1,
+    "url": `https://xk-truck.cn/products/${product.slug}`,
+    "name": product.name,
+    "image": product.main_image_url || undefined
+  }))
+};
+
+// CollectionPage Schema
+const collectionSchema = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": brandFilter 
+    ? `${brandFilter.toUpperCase()} Parts` 
+    : categoryFilter 
+      ? categoryFilter
+      : "All Products",
+  "description": `Browse ${totalProducts || displayProducts.length}+ heavy truck parts${brandFilter ? ` for ${brandFilter.toUpperCase()}` : ''}${categoryFilter ? ` in ${categoryFilter} category` : ''}.`,
+  "url": `https://xk-truck.cn/products${brandFilter ? `?brand=${brandFilter}` : ''}${categoryFilter ? `?category=${categoryFilter}` : ''}`,
+  "isPartOf": {
+    "@id": "https://xk-truck.cn/#website"
+  },
+  "about": {
+    "@type": "Thing",
+    "name": "Heavy Truck Parts"
+  }
+};
 ---
 
 <Layout 
-  title="Products" 
-  description="Browse our complete range of heavy truck parts - headlamps, mirrors, body parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD."
+  title={brandFilter ? `${brandFilter.toUpperCase()} Parts` : categoryFilter ? categoryFilter : "Products"}
+  description={`Browse ${totalProducts || 'our complete range of'} heavy truck parts${brandFilter ? ` for ${brandFilter.toUpperCase()}` : ''}${categoryFilter ? ` - ${categoryFilter}` : ''} - headlamps, mirrors, body parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD.`}
+  schema={[itemListSchema, collectionSchema]}
 >
   <!-- Page Header -->
   <section class="bg-gray-900 text-white py-12">
