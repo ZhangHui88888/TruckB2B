@@ -8,8 +8,8 @@
  * - WHATSAPP_VERIFY_TOKEN: Webhook 验证令牌（自定义字符串）
  */
 
-import { createSupabaseClient } from '../lib/supabase.js';
-import { callDeepSeek } from '../lib/deepseek.js';
+import { getSupabaseClient } from '../lib/supabase.js';
+import { generateChatResponse } from '../lib/deepseek.js';
 
 /**
  * 处理 WhatsApp Webhook
@@ -89,7 +89,7 @@ async function handleIncomingMessage(request, env) {
     console.log('Received WhatsApp message:', messageData);
     
     // 存储消息到数据库
-    const supabase = createSupabaseClient(env);
+    const supabase = getSupabaseClient(env);
     await storeMessage(supabase, messageData, 'incoming');
     
     // 获取或创建对话
@@ -219,7 +219,7 @@ GUIDELINES:
 5. Always offer to help further
 6. Respond in the same language as the customer`;
 
-    const response = await callDeepSeek(env, systemPrompt, userMessage);
+    const response = await generateChatResponse(env, [{ role: 'user', content: userMessage }], systemPrompt);
     return response || "Thank you for your message. Our team will get back to you shortly. For urgent inquiries, please email harry.zhang592802@gmail.com";
     
   } catch (error) {
@@ -318,7 +318,7 @@ async function getSettings(supabase) {
  * 获取 WhatsApp 对话列表（管理后台用）
  */
 export async function getWhatsAppConversations(env) {
-  const supabase = createSupabaseClient(env);
+  const supabase = getSupabaseClient(env);
   
   const { data, error } = await supabase
     .from('whatsapp_conversations')
@@ -337,7 +337,7 @@ export async function getWhatsAppConversations(env) {
  * 获取对话消息（管理后台用）
  */
 export async function getConversationMessages(env, conversationId) {
-  const supabase = createSupabaseClient(env);
+  const supabase = getSupabaseClient(env);
   
   const { data, error } = await supabase
     .from('whatsapp_messages')
