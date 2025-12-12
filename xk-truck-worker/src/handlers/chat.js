@@ -2,7 +2,7 @@
  * AI 客服对话 Handler
  */
 import { saveConversation, getConversationHistory, getSettings, queryKnowledgeBase } from '../lib/supabase.js';
-import { generateRAGResponse } from '../lib/deepseek.js';
+import { generateRAGResponse, extractSearchKeywords } from '../lib/deepseek.js';
 import { sendChatNotification } from '../lib/email.js';
 
 /**
@@ -55,16 +55,25 @@ export async function handleChat(request, env) {
     // 1. 获取对话历史
     const history = await getConversationHistory(env, sessionId, 10);
 
-    // 2. 查询知识库（可选）
+    // 2. 提取搜索关键词（支持多语言）
+    // 从用户消息中提取英文关键词用于知识库搜索
+    let searchQuery = message;
+    try {
+      searchQuery = await extractSearchKeywords(env, message);
+    } catch (err) {
+      console.log('Keyword extraction failed, using original message:', err);
+    }
+
+    // 3. 查询知识库（用英文关键词搜索）
     let knowledgeContext = [];
     try {
-      knowledgeContext = await queryKnowledgeBase(env, message, 3);
+      knowledgeContext = await queryKnowledgeBase(env, searchQuery, 3);
     } catch (kbError) {
       console.error('Knowledge base query failed:', kbError);
       // 继续，不影响主流程
     }
 
-    // 3. 构建消息历史
+    // 4. 构建消息历史
     const messages = history.map(h => ({
       role: h.role,
       content: h.message
@@ -73,7 +82,7 @@ export async function handleChat(request, env) {
     // 添加当前消息
     messages.push({ role: 'user', content: message });
 
-    // 4. 调用 AI 生成回复
+    // 5. 调用 AI 生成回复
     const aiReply = await generateRAGResponse(
       env,
       messages,
@@ -81,7 +90,7 @@ export async function handleChat(request, env) {
       settings.system_prompt
     );
 
-    // 5. 保存 AI 回复
+    // 6. 保存 AI 回复
     await saveConversation(env, {
       sessionId,
       role: 'assistant',

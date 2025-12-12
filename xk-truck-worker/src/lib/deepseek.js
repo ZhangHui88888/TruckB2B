@@ -76,6 +76,52 @@ export async function generateChatResponse(env, messages, systemPrompt = null) {
 }
 
 /**
+ * 从用户消息中提取英文搜索关键词（支持多语言输入）
+ * 用于知识库搜索
+ */
+export async function extractSearchKeywords(env, message) {
+  // 如果消息已经是英文且较短，直接返回
+  if (/^[a-zA-Z0-9\s\?\.\,\!]+$/.test(message) && message.length < 100) {
+    return message;
+  }
+
+  try {
+    const response = await fetch(DEEPSEEK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          {
+            role: 'system',
+            content: 'Extract 2-5 English keywords from the user message for searching a knowledge base about truck parts. Only output the keywords separated by spaces, nothing else. If the message is in another language, translate the key concepts to English keywords.'
+          },
+          { role: 'user', content: message }
+        ],
+        max_tokens: 50,
+        temperature: 0.3
+      })
+    });
+
+    if (!response.ok) {
+      return message;
+    }
+
+    const data = await response.json();
+    const keywords = data.choices[0]?.message?.content?.trim();
+    
+    // 如果提取成功，返回关键词；否则返回原消息
+    return keywords && keywords.length > 0 ? keywords : message;
+  } catch (error) {
+    console.error('Keyword extraction error:', error);
+    return message;
+  }
+}
+
+/**
  * 生成带知识库上下文的回复
  */
 export async function generateRAGResponse(env, messages, knowledgeContext, systemPrompt = null) {
