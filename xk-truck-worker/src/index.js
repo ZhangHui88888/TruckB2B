@@ -4,7 +4,7 @@
  */
 
 import { handleInquiry } from './handlers/inquiry.js';
-import { handleChat } from './handlers/chat.js';
+import { handleChat, handleChatStream } from './handlers/chat.js';
 import { handleSettings } from './handlers/settings.js';
 import { handleAdmin } from './handlers/admin.js';
 import { handleWhatsApp, getWhatsAppConversations, getConversationMessages } from './handlers/whatsapp.js';
@@ -28,6 +28,9 @@ export default {
       } else if (path === '/api/chat' && request.method === 'POST') {
         // AI 客服对话
         response = await handleChat(request, env);
+      } else if (path === '/api/chat/stream' && request.method === 'POST') {
+        // AI 客服对话（流式）
+        response = await handleChatStream(request, env);
       } else if (path === '/api/settings' && request.method === 'GET') {
         // 获取设置（AI开关状态）
         response = await handleSettings(request, env, 'GET');

@@ -2,7 +2,7 @@
  * AI 客服对话 Handler
  */
 import { saveConversation, getConversationHistory, getSettings, queryKnowledgeBase } from '../lib/supabase.js';
-import { generateRAGResponse, extractSearchKeywords } from '../lib/deepseek.js';
+import { generateRAGResponse, extractSearchKeywords, generateStreamResponse } from '../lib/deepseek.js';
 import { sendChatNotification } from '../lib/email.js';
 
 /**
@@ -115,6 +115,145 @@ export async function handleChat(request, env) {
       success: false,
       error: 'Failed to process message. Please try again.',
       reply: "I'm sorry, I encountered an error. Please try again or contact us via WhatsApp for immediate assistance."
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+/**
+ * 处理 AI 客服对话（流式输出）
+ */
+export async function handleChatStream(request, env) {
+  try {
+    const body = await request.json();
+    const { message, sessionId } = body;
+
+    if (!message || !sessionId) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Missing required fields: message, sessionId'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // 保存用户消息
+    await saveConversation(env, {
+      sessionId,
+      role: 'user',
+      message: message.trim(),
+      isAi: false
+    });
+
+    // 获取 AI 设置
+    const settings = await getSettings(env);
+
+    // 如果 AI 关闭
+    if (!settings.ai_enabled) {
+      sendChatNotification(env, { sessionId, message }).catch(console.error);
+      return new Response(JSON.stringify({
+        success: true,
+        aiEnabled: false,
+        reply: settings.welcome_message || "Thank you for your message! Our team will get back to you shortly."
+      }), {
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    // 获取对话历史
+    const history = await getConversationHistory(env, sessionId, 10);
+
+    // 提取搜索关键词
+    let searchQuery = message;
+    try {
+      searchQuery = await extractSearchKeywords(env, message);
+    } catch (err) {
+      console.log('Keyword extraction failed:', err);
+    }
+
+    // 查询知识库
+    let knowledgeContext = [];
+    try {
+      knowledgeContext = await queryKnowledgeBase(env, searchQuery, 3);
+    } catch (kbError) {
+      console.error('Knowledge base query failed:', kbError);
+    }
+
+    // 构建消息历史
+    const messages = history.map(h => ({
+      role: h.role,
+      content: h.message
+    }));
+    messages.push({ role: 'user', content: message });
+
+    // 获取流式响应
+    const stream = await generateStreamResponse(
+      env,
+      messages,
+      knowledgeContext,
+      settings.system_prompt
+    );
+
+    // 创建 TransformStream 来处理和收集完整回复
+    let fullReply = '';
+    const { readable, writable } = new TransformStream({
+      transform(chunk, controller) {
+        const text = new TextDecoder().decode(chunk);
+        // 解析 SSE 数据
+        const lines = text.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') {
+              continue;
+            }
+            try {
+              const json = JSON.parse(data);
+              const content = json.choices?.[0]?.delta?.content || '';
+              if (content) {
+                fullReply += content;
+                controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ content })}\n\n`));
+              }
+            } catch (e) {
+              // 忽略解析错误
+            }
+          }
+        }
+      },
+      async flush(controller) {
+        // 流结束时保存完整回复
+        if (fullReply) {
+          await saveConversation(env, {
+            sessionId,
+            role: 'assistant',
+            message: fullReply,
+            isAi: true,
+            metadata: { knowledgeUsed: knowledgeContext.length > 0 }
+          });
+        }
+        controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
+      }
+    });
+
+    // 将原始流通过 TransformStream
+    stream.pipeTo(writable);
+
+    return new Response(readable, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive'
+      }
+    });
+
+  } catch (error) {
+    console.error('Chat stream error:', error);
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'Stream failed'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

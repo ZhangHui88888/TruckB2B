@@ -138,3 +138,46 @@ export async function generateRAGResponse(env, messages, knowledgeContext, syste
 
   return generateChatResponse(env, messages, prompt);
 }
+
+/**
+ * 生成流式回复（SSE）
+ */
+export async function generateStreamResponse(env, messages, knowledgeContext, systemPrompt = null) {
+  let prompt = systemPrompt || DEFAULT_SYSTEM_PROMPT;
+  
+  if (knowledgeContext && knowledgeContext.length > 0) {
+    const contextText = knowledgeContext
+      .map(item => item.content)
+      .join('\n\n');
+    prompt += `\n\nRelevant Information from Knowledge Base:\n${contextText}\n\nUse this information to answer the customer's question if relevant.`;
+  }
+
+  const apiMessages = [
+    { role: 'system', content: prompt },
+    ...messages.map(m => ({
+      role: m.role,
+      content: m.message || m.content
+    }))
+  ];
+
+  const response = await fetch(DEEPSEEK_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${env.DEEPSEEK_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: apiMessages,
+      max_tokens: 500,
+      temperature: 0.7,
+      stream: true
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`DeepSeek API error: ${response.status}`);
+  }
+
+  return response.body;
+}

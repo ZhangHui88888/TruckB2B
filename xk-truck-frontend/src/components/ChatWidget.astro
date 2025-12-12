@@ -167,14 +167,17 @@
       quickQuestionsContainer.remove();
     }
     
-    // 显示加载状态
-    const loadingId = addLoadingMessage();
-    
     // 禁用发送按钮
     chatSend.disabled = true;
     
+    // 创建 AI 消息容器（用于流式显示）
+    const messageId = 'msg_' + Date.now();
+    const messageDiv = createStreamingMessage(messageId);
+    chatMessages?.appendChild(messageDiv);
+    scrollToBottom();
+    
     try {
-      const response = await fetch(`${API_URL}/api/chat`, {
+      const response = await fetch(`${API_URL}/api/chat/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -185,23 +188,100 @@
         })
       });
       
-      const result = await response.json();
-      
-      // 移除加载消息
-      removeLoadingMessage(loadingId);
-      
-      if (result.success) {
-        addMessage('assistant', result.reply, !result.aiEnabled);
+      // 检查是否是流式响应
+      const contentType = response.headers.get('content-type');
+      if (contentType?.includes('text/event-stream')) {
+        // 流式响应
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        let fullText = '';
+        
+        while (reader) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              if (data === '[DONE]') continue;
+              try {
+                const json = JSON.parse(data);
+                if (json.content) {
+                  fullText += json.content;
+                  updateStreamingMessage(messageId, fullText);
+                  scrollToBottom();
+                }
+              } catch (e) {
+                // 忽略解析错误
+              }
+            }
+          }
+        }
+        
+        // 完成后添加时间戳
+        finalizeStreamingMessage(messageId);
       } else {
-        addMessage('assistant', result.reply || 'Sorry, something went wrong. Please try again.');
+        // 非流式响应（AI 关闭时）
+        const result = await response.json();
+        updateStreamingMessage(messageId, result.reply || 'Sorry, something went wrong.');
+        finalizeStreamingMessage(messageId, !result.aiEnabled);
       }
     } catch (error) {
       console.error('Chat error:', error);
-      removeLoadingMessage(loadingId);
-      addMessage('assistant', 'Network error. Please try again or contact us via WhatsApp.');
+      updateStreamingMessage(messageId, 'Network error. Please try again or contact us via WhatsApp.');
+      finalizeStreamingMessage(messageId);
     } finally {
       chatSend.disabled = false;
       chatInput.focus();
+    }
+  }
+  
+  // 创建流式消息容器
+  function createStreamingMessage(id: string): HTMLDivElement {
+    const messageDiv = document.createElement('div');
+    messageDiv.id = id;
+    messageDiv.className = 'flex gap-3';
+    messageDiv.innerHTML = `
+      <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+        </svg>
+      </div>
+      <div class="bg-white rounded-2xl rounded-tl-sm px-4 py-2 shadow-sm max-w-[80%]">
+        <p class="text-gray-700 text-sm message-content"><span class="inline-block w-2 h-4 bg-gray-400 animate-pulse"></span></p>
+      </div>
+    `;
+    return messageDiv;
+  }
+  
+  // 更新流式消息内容
+  function updateStreamingMessage(id: string, content: string) {
+    const messageDiv = document.getElementById(id);
+    const contentEl = messageDiv?.querySelector('.message-content');
+    if (contentEl) {
+      contentEl.innerHTML = escapeHtml(content) + '<span class="inline-block w-2 h-4 bg-primary animate-pulse ml-1"></span>';
+    }
+  }
+  
+  // 完成流式消息
+  function finalizeStreamingMessage(id: string, isOffline = false) {
+    const messageDiv = document.getElementById(id);
+    const contentEl = messageDiv?.querySelector('.message-content');
+    const containerEl = contentEl?.parentElement;
+    if (contentEl && containerEl) {
+      // 移除光标
+      const cursor = contentEl.querySelector('span');
+      cursor?.remove();
+      
+      // 添加时间和离线提示
+      const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      if (isOffline) {
+        containerEl.innerHTML += '<p class="text-xs text-orange-500 mt-1">⏳ Our team will respond shortly</p>';
+      }
+      containerEl.innerHTML += `<p class="text-xs text-gray-400 mt-1">${time}</p>`;
     }
   }
 
