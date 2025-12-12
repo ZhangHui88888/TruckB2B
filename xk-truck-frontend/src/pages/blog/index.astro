@@ -1,0 +1,147 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+// Get all blog posts, sorted by date
+const allPosts = await getCollection('blog');
+const posts = allPosts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+// Separate featured and regular posts
+const featuredPosts = posts.filter(post => post.data.featured);
+const regularPosts = posts.filter(post => !post.data.featured);
+
+// Format date helper
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+// Blog page schema
+const blogSchema = {
+  "@context": "https://schema.org",
+  "@type": "Blog",
+  "name": "XKTRUCK Blog - Truck Parts Industry Insights",
+  "description": "Expert articles about heavy truck parts, maintenance tips, and industry news for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO trucks.",
+  "url": "https://xk-truck.cn/blog",
+  "publisher": {
+    "@id": "https://xk-truck.cn/#organization"
+  }
+};
+---
+
+<Layout 
+  title="Blog - Truck Parts Industry Insights" 
+  description="Expert articles about heavy truck parts, maintenance tips, sourcing guides, and industry news. Learn from XKTRUCK's 15+ years of experience."
+  schema={blogSchema}
+>
+  <!-- Hero Section -->
+  <section class="bg-gradient-to-r from-primary to-blue-800 text-white py-16">
+    <div class="container mx-auto px-4">
+      <div class="max-w-3xl">
+        <h1 class="text-4xl md:text-5xl font-bold mb-4">
+          Industry Insights & Guides
+        </h1>
+        <p class="text-xl text-blue-100">
+          Expert articles about truck parts, maintenance tips, and sourcing strategies from our team with 15+ years of experience.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Posts -->
+  {featuredPosts.length > 0 && (
+    <section class="py-12 bg-gray-50">
+      <div class="container mx-auto px-4">
+        <h2 class="text-2xl font-bold text-gray-900 mb-8">Featured Articles</h2>
+        <div class="grid md:grid-cols-2 gap-8">
+          {featuredPosts.map(post => (
+            <article class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+              <div class="aspect-video bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center">
+                <svg class="w-16 h-16 text-white/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                </svg>
+              </div>
+              <div class="p-6">
+                <div class="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                  <span class="bg-secondary/10 text-secondary px-2 py-1 rounded text-xs font-medium">Featured</span>
+                  <span>{formatDate(post.data.pubDate)}</span>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2 hover:text-primary transition-colors">
+                  <a href={`/blog/${post.slug}`}>{post.data.title}</a>
+                </h3>
+                <p class="text-gray-600 mb-4 line-clamp-2">{post.data.description}</p>
+                <div class="flex items-center justify-between">
+                  <div class="flex flex-wrap gap-2">
+                    {post.data.tags.slice(0, 2).map(tag => (
+                      <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{tag}</span>
+                    ))}
+                  </div>
+                  <a href={`/blog/${post.slug}`} class="text-primary font-medium text-sm hover:underline">
+                    Read more →
+                  </a>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- All Posts -->
+  <section class="py-12">
+    <div class="container mx-auto px-4">
+      <h2 class="text-2xl font-bold text-gray-900 mb-8">All Articles</h2>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {posts.map(post => (
+          <article class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow border border-gray-100">
+            <div class="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+              <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div class="p-5">
+              <div class="flex items-center gap-2 text-sm text-gray-500 mb-2">
+                <time datetime={post.data.pubDate.toISOString()}>
+                  {formatDate(post.data.pubDate)}
+                </time>
+                <span>•</span>
+                <span>{post.data.author}</span>
+              </div>
+              <h3 class="text-lg font-bold text-gray-900 mb-2 hover:text-primary transition-colors line-clamp-2">
+                <a href={`/blog/${post.slug}`}>{post.data.title}</a>
+              </h3>
+              <p class="text-gray-600 text-sm mb-4 line-clamp-2">{post.data.description}</p>
+              <div class="flex flex-wrap gap-2">
+                {post.data.tags.slice(0, 3).map(tag => (
+                  <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">{tag}</span>
+                ))}
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="py-16 bg-gray-900 text-white">
+    <div class="container mx-auto px-4 text-center">
+      <h2 class="text-3xl font-bold mb-4">Need Expert Advice?</h2>
+      <p class="text-gray-300 mb-8 max-w-2xl mx-auto">
+        Our team has 15+ years of experience in the truck parts industry. Contact us for personalized guidance on parts selection and sourcing.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/contact" class="bg-secondary hover:bg-orange-600 text-white px-8 py-3 rounded-lg font-medium transition-colors">
+          Contact Us
+        </a>
+        <a href="/products" class="bg-white/10 hover:bg-white/20 text-white px-8 py-3 rounded-lg font-medium transition-colors">
+          Browse Products
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>

@@ -1,0 +1,241 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map(post => ({
+    params: { slug: post.slug },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await post.render();
+
+// Format date helper
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+}
+
+// Get related posts (same tags)
+const allPosts = await getCollection('blog');
+const relatedPosts = allPosts
+  .filter(p => p.slug !== post.slug)
+  .filter(p => p.data.tags.some(tag => post.data.tags.includes(tag)))
+  .slice(0, 3);
+
+// Article schema
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": post.data.title,
+  "description": post.data.description,
+  "image": post.data.image ? `https://xk-truck.cn${post.data.image}` : undefined,
+  "datePublished": post.data.pubDate.toISOString(),
+  "author": {
+    "@type": "Organization",
+    "name": post.data.author,
+    "@id": "https://xk-truck.cn/#organization"
+  },
+  "publisher": {
+    "@id": "https://xk-truck.cn/#organization"
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": `https://xk-truck.cn/blog/${post.slug}`
+  }
+};
+
+// Breadcrumb schema
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://xk-truck.cn"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Blog",
+      "item": "https://xk-truck.cn/blog"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": post.data.title,
+      "item": `https://xk-truck.cn/blog/${post.slug}`
+    }
+  ]
+};
+---
+
+<Layout 
+  title={post.data.title}
+  description={post.data.description}
+  schema={[articleSchema, breadcrumbSchema]}
+>
+  <article class="py-12">
+    <div class="container mx-auto px-4">
+      <!-- Breadcrumb -->
+      <nav class="mb-8">
+        <ol class="flex items-center gap-2 text-sm text-gray-500">
+          <li><a href="/" class="hover:text-primary">Home</a></li>
+          <li><span class="mx-2">/</span></li>
+          <li><a href="/blog" class="hover:text-primary">Blog</a></li>
+          <li><span class="mx-2">/</span></li>
+          <li class="text-gray-900 truncate max-w-xs">{post.data.title}</li>
+        </ol>
+      </nav>
+
+      <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <header class="mb-10">
+          <div class="flex flex-wrap gap-2 mb-4">
+            {post.data.tags.map(tag => (
+              <span class="text-sm bg-primary/10 text-primary px-3 py-1 rounded-full">{tag}</span>
+            ))}
+          </div>
+          <h1 class="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+            {post.data.title}
+          </h1>
+          <div class="flex items-center gap-4 text-gray-600">
+            <div class="flex items-center gap-2">
+              <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
+                {post.data.author.charAt(0)}
+              </div>
+              <div>
+                <p class="font-medium text-gray-900">{post.data.author}</p>
+                <p class="text-sm">{formatDate(post.data.pubDate)}</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Featured Image Placeholder -->
+        <div class="aspect-video bg-gradient-to-br from-primary to-blue-600 rounded-xl mb-10 flex items-center justify-center">
+          <svg class="w-24 h-24 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        </div>
+
+        <!-- Content -->
+        <div class="prose prose-lg max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-900 prose-ul:text-gray-700 prose-ol:text-gray-700 prose-table:text-gray-700">
+          <Content />
+        </div>
+
+        <!-- Share & Tags -->
+        <footer class="mt-12 pt-8 border-t">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p class="text-sm text-gray-500 mb-2">Tags:</p>
+              <div class="flex flex-wrap gap-2">
+                {post.data.tags.map(tag => (
+                  <span class="text-sm bg-gray-100 text-gray-600 px-3 py-1 rounded">{tag}</span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p class="text-sm text-gray-500 mb-2">Share:</p>
+              <div class="flex gap-3">
+                <a 
+                  href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(post.data.title)}&url=${encodeURIComponent(`https://xk-truck.cn/blog/${post.slug}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="w-10 h-10 bg-gray-100 hover:bg-primary hover:text-white rounded-full flex items-center justify-center transition-colors"
+                  aria-label="Share on Twitter"
+                >
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                </a>
+                <a 
+                  href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`https://xk-truck.cn/blog/${post.slug}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="w-10 h-10 bg-gray-100 hover:bg-primary hover:text-white rounded-full flex items-center justify-center transition-colors"
+                  aria-label="Share on LinkedIn"
+                >
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                </a>
+                <a 
+                  href={`mailto:?subject=${encodeURIComponent(post.data.title)}&body=${encodeURIComponent(`Check out this article: https://xk-truck.cn/blog/${post.slug}`)}`}
+                  class="w-10 h-10 bg-gray-100 hover:bg-primary hover:text-white rounded-full flex items-center justify-center transition-colors"
+                  aria-label="Share via Email"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                  </svg>
+                </a>
+              </div>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </article>
+
+  <!-- Related Posts -->
+  {relatedPosts.length > 0 && (
+    <section class="py-12 bg-gray-50">
+      <div class="container mx-auto px-4">
+        <h2 class="text-2xl font-bold text-gray-900 mb-8">Related Articles</h2>
+        <div class="grid md:grid-cols-3 gap-8">
+          {relatedPosts.map(relatedPost => (
+            <article class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+              <div class="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                <svg class="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div class="p-5">
+                <p class="text-sm text-gray-500 mb-2">{formatDate(relatedPost.data.pubDate)}</p>
+                <h3 class="font-bold text-gray-900 mb-2 hover:text-primary transition-colors line-clamp-2">
+                  <a href={`/blog/${relatedPost.slug}`}>{relatedPost.data.title}</a>
+                </h3>
+                <p class="text-gray-600 text-sm line-clamp-2">{relatedPost.data.description}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- CTA Section -->
+  <section class="py-16 bg-primary text-white">
+    <div class="container mx-auto px-4 text-center">
+      <h2 class="text-3xl font-bold mb-4">Looking for Truck Parts?</h2>
+      <p class="text-blue-100 mb-8 max-w-2xl mx-auto">
+        We supply high-quality parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, and more. Get a quote today!
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/products" class="bg-white text-primary hover:bg-gray-100 px-8 py-3 rounded-lg font-medium transition-colors">
+          Browse Products
+        </a>
+        <a href="/contact" class="bg-secondary hover:bg-orange-600 text-white px-8 py-3 rounded-lg font-medium transition-colors">
+          Get Quote
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>
