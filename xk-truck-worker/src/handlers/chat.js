@@ -2,6 +2,7 @@
  * AI 客服对话 Handler
  */
 import { saveConversation, getConversationHistory, getSettings, queryKnowledgeBase } from '../lib/supabase.js';
+import { autoLearnFromConversation } from './knowledge-learn.js';
 import { generateRAGResponse, extractSearchKeywords, generateStreamResponse } from '../lib/deepseek.js';
 import { sendChatNotification } from '../lib/email.js';
 
@@ -73,10 +74,12 @@ export async function handleChat(request, env) {
       // 继续，不影响主流程
     }
 
-    // 4. 构建消息历史
+    // 4. 构建消息历史（清理 Markdown 格式）
+    const cleanText = (text) => text ? text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/#{1,6}\s/g, '').trim() : '';
+    
     const messages = history.map(h => ({
       role: h.role,
-      content: h.message
+      content: cleanText(h.message)
     }));
     
     // 添加当前消息
@@ -90,19 +93,30 @@ export async function handleChat(request, env) {
       settings.system_prompt
     );
 
-    // 6. 保存 AI 回复
+    // 6. 清理 AI 回复中的 Markdown
+    const cleanReply = cleanText(aiReply);
+    
+    // 7. 保存 AI 回复
     await saveConversation(env, {
       sessionId,
       role: 'assistant',
-      message: aiReply,
+      message: cleanReply,
       isAi: true,
       metadata: { knowledgeUsed: knowledgeContext.length > 0 }
     });
 
+    // 8. 自动学习（当未使用知识库时，说明是新问题，可以学习）
+    if (settings.auto_learn_enabled && knowledgeContext.length === 0) {
+      // 异步执行，不阻塞响应
+      autoLearnFromConversation(env, sessionId, message, cleanReply).catch(err => {
+        console.error('Auto-learn failed:', err);
+      });
+    }
+
     return new Response(JSON.stringify({
       success: true,
       aiEnabled: true,
-      reply: aiReply,
+      reply: cleanReply,
       sessionId
     }), {
       status: 200,
@@ -182,12 +196,15 @@ export async function handleChatStream(request, env) {
       console.error('Knowledge base query failed:', kbError);
     }
 
-    // 构建消息历史
+    // 构建消息历史（清理 Markdown 格式）
+    const cleanText = (text) => text ? text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/#{1,6}\s/g, '').trim() : '';
+    
     const messages = history.map(h => ({
       role: h.role,
-      content: h.message
+      content: cleanText(h.message)
     }));
-    messages.push({ role: 'user', content: message });
+    // 添加当前消息，并提示 AI 用相同语言回复
+    messages.push({ role: 'user', content: `[Respond in the same language as this message] ${message}` });
 
     // 获取流式响应
     const stream = await generateStreamResponse(
@@ -199,12 +216,19 @@ export async function handleChatStream(request, env) {
 
     // 创建 TransformStream 来处理和收集完整回复
     let fullReply = '';
+    let buffer = '';  // 缓存不完整的数据
+    
     const { readable, writable } = new TransformStream({
       transform(chunk, controller) {
         const text = new TextDecoder().decode(chunk);
-        // 解析 SSE 数据
-        const lines = text.split('\n');
-        for (const line of lines) {
+        buffer += text;
+        
+        // 按 \n\n 分割，保留最后一个可能不完整的部分
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop() || '';  // 最后一个可能不完整，保留到下次
+        
+        for (const part of parts) {
+          const line = part.trim();
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             if (data === '[DONE]') {
@@ -218,7 +242,7 @@ export async function handleChatStream(request, env) {
                 controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ content })}\n\n`));
               }
             } catch (e) {
-              // 忽略解析错误
+              console.error('SSE parse error:', e, 'data:', data);
             }
           }
         }

@@ -14,7 +14,7 @@ interface Props {
 
 const { 
   title, 
-  description = 'Professional heavy truck parts supplier - VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD. OEM quality, competitive prices, global shipping.',
+  description = 'Professional heavy truck lights supplier - VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD. OEM quality headlamps, tail lamps, fog lamps. Competitive prices, global shipping.',
   image = '/images/og-image.svg',
   canonical,
   schema
@@ -34,7 +34,7 @@ const organizationSchema = {
     "width": 200,
     "height": 60
   },
-  "description": "Professional heavy truck parts manufacturer - headlamps, mirrors, and exterior parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD. 35,000㎡ factory in China.",
+  "description": "Professional heavy truck lights manufacturer - headlamps, tail lamps, fog lamps, mirrors for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD. 35,000㎡ factory in China.",
   "foundingDate": "2010",
   "areaServed": "Worldwide",
   "numberOfEmployees": {
@@ -69,7 +69,7 @@ const websiteSchema = {
   "@type": "WebSite",
   "@id": "https://xk-truck.cn/#website",
   "url": "https://xk-truck.cn",
-  "name": "XKTRUCK - Heavy Truck Parts Supplier",
+  "name": "XKTRUCK - Heavy Truck Lights Supplier",
   "description": description,
   "publisher": {
     "@id": "https://xk-truck.cn/#organization"
@@ -88,7 +88,7 @@ const canonicalUrl = canonical || new URL(Astro.url.pathname, siteUrl).href;
     <meta name="generator" content={Astro.generator} />
     
     <!-- SEO Meta Tags -->
-    <title>{title} | XKTRUCK - Heavy Truck Parts</title>
+    <title>{title} | XKTRUCK - Heavy Truck Lights</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
     

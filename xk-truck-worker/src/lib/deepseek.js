@@ -5,30 +5,29 @@
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
 
 /**
- * 默认系统提示词
+ * 默认系统提示词 - 简洁版，让AI自由发挥语言能力
  */
-const DEFAULT_SYSTEM_PROMPT = `You are a professional customer service assistant for XKTRUCK, a leading manufacturer of heavy truck parts.
+const DEFAULT_SYSTEM_PROMPT = `You are a customer service assistant for XKTRUCK.
 
-Company Information:
-- Brand: XKTRUCK / XKLAMP
-- Products: Truck headlamps, mirrors, and exterior parts
-- Supported Brands: VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD
-- Factory: 35,000㎡ manufacturing facility in China
-- Quality: ADB-certified, OEM quality standards
+Company Info:
+- Name: XKTRUCK (brand XKLAMP)
+- Location: Jiangsu, China
+- Factory: 35,000 square meters
+- Main Products (priority order):
+  1. Truck LAMPS/LIGHTS (our specialty): headlamps, tail lamps, fog lamps, side marker lights, work lights
+  2. Mirrors: side mirrors, rearview mirrors
+  3. Some body parts: limited selection
+- We do NOT sell engines, transmissions, or mechanical parts
+- Brands we serve: VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD
+- Minimum Order Quantity (MOQ): 40 pieces per item
+- Payment: T/T, PayPal, Western Union (30% deposit with order, 70% balance before shipment)
+- Shipping: Worldwide via sea/air freight, 15-30 days delivery
 
-Your responsibilities:
-1. Answer product inquiries professionally
-2. Provide information about specifications, compatibility, and availability
-3. Guide customers to submit inquiry forms for quotes
-4. Be helpful, concise, and professional
+IMPORTANT: Our main specialty is truck LIGHTING products. We also offer mirrors and some body parts, but lamps are our core business.
 
-Guidelines:
-- Always respond in English unless the customer writes in another language
-- For pricing questions, ask them to submit an inquiry form or contact via WhatsApp
-- For technical questions, provide helpful information based on your knowledge
-- If you don't know something, honestly say so and suggest contacting the sales team
-- Keep responses concise but helpful (under 200 words when possible)
-- Use a friendly, professional tone`;
+When mentioning brand names, always write them completely: VOLVO (not VO), SCANIA (not SCA), MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD.
+
+Keep responses concise and helpful.`;
 
 /**
  * 调用 DeepSeek API 生成回复
@@ -55,8 +54,8 @@ export async function generateChatResponse(env, messages, systemPrompt = null) {
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: apiMessages,
-        max_tokens: 500,
-        temperature: 0.7,
+        max_tokens: 800,
+        temperature: 0.3,
         stream: false
       })
     });
@@ -122,15 +121,47 @@ export async function extractSearchKeywords(env, message) {
 }
 
 /**
+ * 语言匹配规则（强制追加到所有 prompt）
+ */
+const LANGUAGE_RULE = `
+
+CRITICAL LANGUAGE RULES:
+1. DETECT the language of the customer's CURRENT/LATEST message ONLY (ignore previous messages in conversation history).
+2. RESPOND in that EXACT same language.
+3. Examples:
+   - If current message is in English ("20 pieces OK?") → respond in English
+   - If current message is in Thai → respond in Thai
+   - If current message is in Chinese → respond in Chinese
+4. Do NOT use Markdown formatting (no ** or * or #). Write plain text only.
+5. Write naturally and fluently as a native speaker.`;
+
+/**
+ * 清理文本中的 Markdown 格式
+ */
+function cleanMarkdown(text) {
+  if (!text) return '';
+  return text
+    .replace(/\*\*/g, '')  // 移除 **
+    .replace(/\*/g, '')    // 移除 *
+    .replace(/#{1,6}\s/g, '') // 移除标题 #
+    .replace(/`/g, '')     // 移除代码标记
+    .trim();
+}
+
+/**
  * 生成带知识库上下文的回复
  */
 export async function generateRAGResponse(env, messages, knowledgeContext, systemPrompt = null) {
-  let prompt = systemPrompt || DEFAULT_SYSTEM_PROMPT;
+  // 始终使用默认提示词，忽略数据库中可能有问题的 prompt
+  let prompt = DEFAULT_SYSTEM_PROMPT;
+  
+  // 强制追加语言匹配规则
+  prompt += LANGUAGE_RULE;
   
   // 如果有知识库上下文，添加到系统提示
   if (knowledgeContext && knowledgeContext.length > 0) {
     const contextText = knowledgeContext
-      .map(item => item.content)
+      .map(item => cleanMarkdown(item.content))
       .join('\n\n');
     
     prompt += `\n\nRelevant Information from Knowledge Base:\n${contextText}\n\nUse this information to answer the customer's question if relevant.`;
@@ -143,11 +174,16 @@ export async function generateRAGResponse(env, messages, knowledgeContext, syste
  * 生成流式回复（SSE）
  */
 export async function generateStreamResponse(env, messages, knowledgeContext, systemPrompt = null) {
-  let prompt = systemPrompt || DEFAULT_SYSTEM_PROMPT;
+  // 始终使用默认提示词，忽略数据库中可能有问题的 prompt
+  let prompt = DEFAULT_SYSTEM_PROMPT;
   
+  // 强制追加语言匹配规则
+  prompt += LANGUAGE_RULE;
+  
+  // 添加知识库上下文
   if (knowledgeContext && knowledgeContext.length > 0) {
     const contextText = knowledgeContext
-      .map(item => item.content)
+      .map(item => cleanMarkdown(item.content))
       .join('\n\n');
     prompt += `\n\nRelevant Information from Knowledge Base:\n${contextText}\n\nUse this information to answer the customer's question if relevant.`;
   }
@@ -169,8 +205,8 @@ export async function generateStreamResponse(env, messages, knowledgeContext, sy
     body: JSON.stringify({
       model: 'deepseek-chat',
       messages: apiMessages,
-      max_tokens: 500,
-      temperature: 0.7,
+      max_tokens: 800,
+      temperature: 0.3,
       stream: true
     })
   });

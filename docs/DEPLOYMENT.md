@@ -1,6 +1,11 @@
-# 部署准备清单
+# XKTRUCK 部署指南
 
-本文档列出部署外贸独立站所需准备的全部数据和账号信息。
+本文档包含项目部署所需的全部信息，包括账号配置、部署步骤和运维指南。
+
+> **快速导航**
+> - [账号配置](#一账号注册无需提供密码)
+> - [部署步骤](#十一部署步骤)
+> - [日常运维](#十二日常运维)
 
 ---
 
@@ -398,27 +403,88 @@ DOMAIN=
 
 ---
 
-## 下一步
+## 十一、部署步骤
 
-准备好以上信息后，即可开始部署：
+### 11.1 部署前端（Cloudflare Pages）
+
+```bash
+# 推送代码后自动部署
+git add -A
+git commit -m "feat: update frontend"
+git push
+```
+
+或手动触发：Cloudflare Pages → Deployments → Retry
+
+### 11.2 部署后端（Cloudflare Worker）
+
+```bash
+cd xk-truck-worker
+wrangler deploy --env=""
+```
+
+### 11.3 配置 Worker 密钥
+
+```bash
+cd xk-truck-worker
+wrangler secret put SUPABASE_URL
+wrangler secret put SUPABASE_SERVICE_KEY
+wrangler secret put DEEPSEEK_API_KEY
+wrangler secret put RESEND_API_KEY
+wrangler secret put NOTIFY_EMAIL
+```
+
+### 11.4 配置 Vectorize（向量搜索）
+
+```bash
+# 创建向量索引
+wrangler vectorize create xktruck-knowledge --dimensions=1024 --metric=cosine
+
+# 部署
+wrangler deploy
+```
+
+---
+
+## 十二、日常运维
+
+### 12.1 查看 Worker 日志
+
+```bash
+cd xk-truck-worker
+wrangler tail
+```
+
+### 12.2 添加博客文章
+
+1. 在 `xk-truck-frontend/src/content/blog/` 创建 `.md` 文件
+2. 添加 frontmatter（title, description, pubDate）
+3. 提交并推送
+
+### 12.3 同步产品数据
+
+```bash
+cd xk-truck-frontend
+npm run sync:products
+```
+
+---
+
+## 十三、部署状态
 
 ### 基础部署
-1. ✅ 配置 Cloudflare 域名
-2. ✅ 部署前端到 Cloudflare Pages
-3. ✅ 部署后端 Worker（https://xk-truck-api.harry-zhang592802.workers.dev）
-4. ✅ 导入知识库到 Supabase（初始 FAQ 已导入）
-5. ⏸️ 配置 WhatsApp Webhook（暂停，需海外手机验证）
-6. ⏳ 测试全流程
+- ✅ Cloudflare 域名配置
+- ✅ 前端部署（Cloudflare Pages）
+- ✅ 后端部署（Cloudflare Worker）
+- ✅ 知识库导入（Supabase）
+- ⏸️ WhatsApp Webhook（暂停，需海外手机验证）
 
-### SEO/GEO 配置
-7. ✅ 创建 robots.txt 和 sitemap.xml（已完成）
-8. ✅ 提交网站到 Google Search Console（已验证）
-9. 提交网站到 Bing Webmaster Tools
-10. ✅ 配置 Schema.org 结构化数据（已完成）
+### SEO 配置
+- ✅ robots.txt 和 sitemap.xml
+- ✅ Google Search Console 验证
+- ✅ Schema.org 结构化数据
+- ⏳ Bing Webmaster Tools
 
-### 动态关键词（方案 C）
-11. 配置 Google Cloud 服务账号（参考 `Google-Cloud-GSC配置指南.md`）
-12. 在 Supabase 创建 SEO 相关表
-13. 配置 GitHub Secrets
-14. ✅ 部署 GitHub Actions 工作流（已创建 `.github/workflows/seo-auto-update.yml`）
-15. 测试自动更新流程
+---
+
+*最后更新: 2025-12-13*

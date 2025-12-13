@@ -14,10 +14,15 @@ vars = { CORS_ORIGIN = "https://xk-truck.cn" }
 [env.development]
 vars = { CORS_ORIGIN = "*" }
 
+# Vectorize 向量数据库绑定
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "xktruck-knowledge"
+
 # 需要通过 wrangler secret put 设置的密钥：
 # - SUPABASE_URL
 # - SUPABASE_SERVICE_KEY
-# - DEEPSEEK_API_KEY
+# - DEEPSEEK_API_KEY          # 同时用于 Chat 和 Embedding
 # - RESEND_API_KEY
 # - NOTIFY_EMAIL
 #

@@ -8,6 +8,7 @@ import { handleChat, handleChatStream } from './handlers/chat.js';
 import { handleSettings } from './handlers/settings.js';
 import { handleAdmin } from './handlers/admin.js';
 import { handleWhatsApp, getWhatsAppConversations, getConversationMessages } from './handlers/whatsapp.js';
+import { handleGetPendingReviews, handleReviewConversation, handleAddKnowledge, handleMigrateKnowledge } from './handlers/knowledge-learn.js';
 
 export default {
   async fetch(request, env, ctx) {
@@ -56,6 +57,18 @@ export default {
         response = new Response(JSON.stringify({ success: true, data: messages }), {
           headers: { 'Content-Type': 'application/json' }
         });
+      } else if (path === '/api/knowledge/pending' && request.method === 'GET') {
+        // 获取待审核的对话
+        response = await handleGetPendingReviews(request, env);
+      } else if (path === '/api/knowledge/review' && request.method === 'POST') {
+        // 审核对话并决定是否入库
+        response = await handleReviewConversation(request, env);
+      } else if (path === '/api/knowledge/add' && request.method === 'POST') {
+        // 手动添加知识条目
+        response = await handleAddKnowledge(request, env);
+      } else if (path === '/api/knowledge/migrate' && request.method === 'POST') {
+        // 迁移现有知识库到 Vectorize
+        response = await handleMigrateKnowledge(request, env);
       } else if (path === '/api/health') {
         // 健康检查
         response = new Response(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }), {

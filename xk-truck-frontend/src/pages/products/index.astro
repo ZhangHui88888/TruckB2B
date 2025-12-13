@@ -190,7 +190,7 @@ const itemListSchema = {
     ? `${brandFilter.toUpperCase()} Truck Parts` 
     : categoryFilter 
       ? `${categoryFilter} for Heavy Trucks`
-      : "Heavy Truck Parts Catalog",
+      : "Heavy Truck Lights Catalog",
   "description": "Browse our complete range of aftermarket truck parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD.",
   "numberOfItems": totalProducts || displayProducts.length,
   "itemListElement": displayProducts.slice(0, 20).map((product, index) => ({
@@ -211,21 +211,21 @@ const collectionSchema = {
     : categoryFilter 
       ? categoryFilter
       : "All Products",
-  "description": `Browse ${totalProducts || displayProducts.length}+ heavy truck parts${brandFilter ? ` for ${brandFilter.toUpperCase()}` : ''}${categoryFilter ? ` in ${categoryFilter} category` : ''}.`,
+  "description": `Browse ${totalProducts || displayProducts.length}+ heavy truck lights${brandFilter ? ` for ${brandFilter.toUpperCase()}` : ''}${categoryFilter ? ` in ${categoryFilter} category` : ''}.`,
   "url": `https://xk-truck.cn/products${brandFilter ? `?brand=${brandFilter}` : ''}${categoryFilter ? `?category=${categoryFilter}` : ''}`,
   "isPartOf": {
     "@id": "https://xk-truck.cn/#website"
   },
   "about": {
     "@type": "Thing",
-    "name": "Heavy Truck Parts"
+    "name": "Heavy Truck Lights"
   }
 };
 ---
 
 <Layout 
   title={brandFilter ? `${brandFilter.toUpperCase()} Parts` : categoryFilter ? categoryFilter : "Products"}
-  description={`Browse ${totalProducts || 'our complete range of'} heavy truck parts${brandFilter ? ` for ${brandFilter.toUpperCase()}` : ''}${categoryFilter ? ` - ${categoryFilter}` : ''} - headlamps, mirrors, body parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD.`}
+  description={`Browse ${totalProducts || 'our complete range of'} heavy truck lights${brandFilter ? ` for ${brandFilter.toUpperCase()}` : ''}${categoryFilter ? ` - ${categoryFilter}` : ''} - headlamps, mirrors, body parts for VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD.`}
   schema={[itemListSchema, collectionSchema]}
 >
   <!-- Page Header -->
@@ -233,7 +233,7 @@ const collectionSchema = {
     <div class="container mx-auto px-4">
       <h1 class="text-3xl md:text-4xl font-bold mb-4">Products</h1>
       <p class="text-gray-300 max-w-2xl">
-        Browse our complete catalog of heavy truck parts. Filter by brand or category to find what you need.
+        Browse our complete catalog of heavy truck lights. Filter by brand or category to find what you need.
       </p>
     </div>
   </section>
