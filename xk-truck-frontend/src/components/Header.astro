@@ -43,51 +43,15 @@ const currentPath = Astro.url.pathname;
   <nav class="container mx-auto px-4">
     <div class="flex items-center justify-between h-16">
       <!-- Logo -->
-      <a href="/" class="flex items-center gap-2">
-        <!-- 红色卡车图标 -->
-        <svg class="w-12 h-12" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#1a0a0a"/>
-              <stop offset="100%" stop-color="#2d1515"/>
-            </linearGradient>
-            <linearGradient id="leftBeam" x1="100%" y1="0%" x2="0%" y2="0%">
-              <stop offset="0%" stop-color="#fef3c7"/>
-              <stop offset="30%" stop-color="#fcd34d"/>
-              <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
-            </linearGradient>
-            <linearGradient id="rightBeam" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#fef3c7"/>
-              <stop offset="30%" stop-color="#fcd34d"/>
-              <stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/>
-            </linearGradient>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-              <feMerge>
-                <feMergeNode in="coloredBlur"/>
-                <feMergeNode in="SourceGraphic"/>
-              </feMerge>
-            </filter>
-          </defs>
-          <rect width="64" height="64" rx="12" fill="url(#bg)"/>
-          <polygon points="6,42 0,36 0,56 6,50" fill="url(#leftBeam)" opacity="0.9"/>
-          <polygon points="6,44 2,40 2,52 6,48" fill="url(#leftBeam)" opacity="0.5"/>
-          <polygon points="58,42 64,36 64,56 58,50" fill="url(#rightBeam)" opacity="0.9"/>
-          <polygon points="58,44 62,40 62,52 58,48" fill="url(#rightBeam)" opacity="0.5"/>
-          <rect x="8" y="6" width="48" height="24" rx="4" fill="#7f1d1d" stroke="#991b1b" stroke-width="2"/>
-          <rect x="12" y="10" width="40" height="16" rx="2" fill="#0c4a6e"/>
-          <rect x="14" y="12" width="16" height="12" rx="1" fill="#0369a1" opacity="0.4"/>
-          <rect x="6" y="32" width="52" height="24" rx="3" fill="#7f1d1d" stroke="#991b1b" stroke-width="1"/>
-          <rect x="20" y="36" width="24" height="14" rx="2" fill="#292524"/>
-          <rect x="22" y="39" width="20" height="2" rx="1" fill="#44403c"/>
-          <rect x="22" y="44" width="20" height="2" rx="1" fill="#44403c"/>
-          <rect x="7" y="38" width="11" height="10" rx="2" fill="#fef3c7" filter="url(#glow)"/>
-          <rect x="9" y="40" width="7" height="6" rx="1" fill="#ffffff"/>
-          <rect x="46" y="38" width="11" height="10" rx="2" fill="#fef3c7" filter="url(#glow)"/>
-          <rect x="48" y="40" width="7" height="6" rx="1" fill="#ffffff"/>
-          <text x="32" y="48" font-family="system-ui, -apple-system, sans-serif" font-size="10" font-weight="900" fill="#fcd34d" text-anchor="middle" letter-spacing="1">XK</text>
-          <rect x="8" y="54" width="48" height="4" rx="2" fill="#44403c"/>
-        </svg>
+      <a href="/" class="flex items-center gap-3">
+        <!-- 简化的Logo图标 -->
+        <div class="relative w-12 h-12 bg-gradient-to-br from-red-800 to-red-900 rounded-lg flex items-center justify-center shadow-md">
+          <!-- 车灯光束效果 -->
+          <div class="absolute -left-2 top-1/2 -translate-y-1/2 w-3 h-1 bg-gradient-to-l from-yellow-300 to-transparent opacity-70"></div>
+          <div class="absolute -right-2 top-1/2 -translate-y-1/2 w-3 h-1 bg-gradient-to-r from-yellow-300 to-transparent opacity-70"></div>
+          <!-- XK文字 -->
+          <span class="text-2xl font-black text-yellow-300 tracking-tight">XK</span>
+        </div>
         <div>
           <span class="font-bold text-xl text-gray-900">TRUCK</span>
           <span class="block text-xs text-gray-500">Heavy Truck Lights</span>
