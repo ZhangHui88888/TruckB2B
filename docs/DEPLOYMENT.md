@@ -108,6 +108,20 @@
 - Meta 开发者账户：待验证（大陆手机收不到验证码，需用港澳或海外手机号）
 - 状态：⏸️ 暂停，后续再配置
 
+**配置步骤（代码已实现）：**
+1. 完成 Meta 开发者账户验证
+2. 创建 Meta Business App
+3. 添加 WhatsApp 产品
+4. 获取 Phone Number ID 和 Access Token
+5. 配置 Webhook URL：`https://your-worker.workers.dev/api/whatsapp/webhook`
+6. 设置 Webhook Verify Token（自定义字符串）
+7. 在 Worker 中设置 Secrets：
+   ```bash
+   wrangler secret put WHATSAPP_PHONE_NUMBER_ID
+   wrangler secret put WHATSAPP_ACCESS_TOKEN
+   wrangler secret put WHATSAPP_VERIFY_TOKEN
+   ```
+
 ---
 
 ## 三、业务数据
@@ -216,8 +230,8 @@ SUPABASE_SERVICE_KEY=
 # ===== Resend =====
 RESEND_API_KEY=
 
-# ===== OpenAI =====
-OPENAI_API_KEY=
+# ===== DeepSeek AI =====
+DEEPSEEK_API_KEY=
 
 # ===== WhatsApp =====
 WHATSAPP_BUSINESS_ACCOUNT_ID=
@@ -299,7 +313,7 @@ DOMAIN=
 | `GSC_SITE_URL` | 网站 URL，如 `https://yourdomain.com` |
 | `SUPABASE_URL` | Supabase 项目 URL |
 | `SUPABASE_KEY` | Supabase service_role key |
-| `OPENAI_API_KEY` | OpenAI API Key |
+| `DEEPSEEK_API_KEY` | DeepSeek API Key（用于 Chat + Embedding） |
 | `RESEND_API_KEY` | Resend API Key |
 | `NOTIFY_EMAIL` | 接收 SEO 周报的邮箱 |
 | `CF_DEPLOY_HOOK` | Cloudflare Pages 部署钩子 |
@@ -314,18 +328,27 @@ DOMAIN=
 
 部署前需在 Supabase 中创建以下表：
 
-### 1. 知识库表（RAG）
-```sql
--- 已有，用于 AI 客服
-CREATE TABLE knowledge_base (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  content TEXT,
-  embedding VECTOR(1536),
-  metadata JSONB
-);
-```
+### 1. 基础表（create_tables.sql）
+执行 `xk-truck-worker/sql/create_tables.sql`，包含：
+- `products` - 产品表
+- `brands` - 品牌表
+- `categories` - 分类表
+- `inquiries` - 询盘表
+- `conversations` - 对话表
+- `settings` - 设置表
 
-### 2. SEO 配置表（方案 C）
+### 2. 知识库表（knowledge-base.sql）
+执行 `xk-truck-worker/sql/knowledge-base.sql`，包含：
+- `knowledge_base` - 知识库表（支持全文搜索）
+- 初始示例数据（公司信息、产品信息、FAQ）
+
+### 3. WhatsApp 表（whatsapp-tables.sql）
+执行 `xk-truck-worker/sql/whatsapp-tables.sql`，包含：
+- `whatsapp_conversations` - WhatsApp 对话表
+- `whatsapp_messages` - WhatsApp 消息表
+- `whatsapp_stats` - 统计视图
+
+### 4. SEO 配置表（可选，方案 C）
 ```sql
 CREATE TABLE page_seo (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -338,7 +361,7 @@ CREATE TABLE page_seo (
 );
 ```
 
-### 3. 关键词追踪表（方案 C）
+### 5. 关键词追踪表（可选，方案 C）
 ```sql
 CREATE TABLE keyword_performance (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -351,7 +374,7 @@ CREATE TABLE keyword_performance (
 );
 ```
 
-### 4. AI 爬虫日志表（GEO 监控）
+### 6. AI 爬虫日志表（可选，GEO 监控）
 ```sql
 CREATE TABLE ai_bot_visits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -379,8 +402,8 @@ SUPABASE_SERVICE_KEY=
 # ===== Resend =====
 RESEND_API_KEY=
 
-# ===== OpenAI =====
-OPENAI_API_KEY=
+# ===== DeepSeek AI =====
+DEEPSEEK_API_KEY=
 
 # ===== WhatsApp =====
 WHATSAPP_BUSINESS_ACCOUNT_ID=
@@ -427,22 +450,228 @@ wrangler deploy --env=""
 
 ```bash
 cd xk-truck-worker
+
+# Supabase
 wrangler secret put SUPABASE_URL
+# 输入: https://xktruck.supabase.co
+
 wrangler secret put SUPABASE_SERVICE_KEY
+# 输入: sb_secret_xxxxx
+
+# DeepSeek AI
 wrangler secret put DEEPSEEK_API_KEY
+# 注意：变量名是 DEEPSEEK_API_KEY（不是 DEEPSEEK）
+# 输入: sk-xxxxx
+
+# Resend 邮件
 wrangler secret put RESEND_API_KEY
+# 输入: re_xxxxx
+
+# 通知邮箱
 wrangler secret put NOTIFY_EMAIL
+# 输入: harry.zhang592802@gmail.com
+
+# 管理 API Key（可选，用于设置接口鉴权）
+wrangler secret put ADMIN_API_KEY
+# 输入: 自定义强密码
+
+# WhatsApp（可选，待配置）
+# wrangler secret put WHATSAPP_PHONE_NUMBER_ID
+# wrangler secret put WHATSAPP_ACCESS_TOKEN
+# wrangler secret put WHATSAPP_VERIFY_TOKEN
 ```
 
 ### 11.4 配置 Vectorize（向量搜索）
 
+#### 什么是 Vectorize？
+
+Vectorize 是 Cloudflare 的向量数据库服务，用于存储和搜索文本向量（Embeddings）。
+
+**为什么需要 Vectorize？**
+- **语义搜索**：理解问题的意思，而不只是关键词匹配
+- **多语言支持**：中文问题也能搜到英文答案
+- **高性能**：毫秒级搜索响应
+- **免费额度大**：500 万向量、3000 万查询/月
+
+#### 步骤 1：创建向量索引
+
+在 `xk-truck-worker` 目录下运行：
+
 ```bash
 # 创建向量索引
+# --dimensions=1024: DeepSeek Embedding 模型的输出维度
+# --metric=cosine: 使用余弦相似度计算
 wrangler vectorize create xktruck-knowledge --dimensions=1024 --metric=cosine
+```
 
-# 部署
+**输出示例：**
+```
+✅ Successfully created index 'xktruck-knowledge'
+📋 Index ID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+📐 Dimensions: 1024
+📏 Metric: cosine
+```
+
+#### 步骤 2：部署 Worker
+
+```bash
+# Vectorize 绑定会自动配置（在 wrangler.toml 中已定义）
 wrangler deploy
 ```
+
+**wrangler.toml 中的配置：**
+```toml
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "xktruck-knowledge"
+```
+
+> **注意**：Embedding 使用现有的 `DEEPSEEK_API_KEY`，无需额外配置。
+
+#### 步骤 3：迁移现有知识库（可选）
+
+如果你的 Supabase `knowledge_base` 表中已有数据，需要迁移到 Vectorize。
+
+**方法 A：批量迁移 API（推荐）**
+
+```bash
+# 调用迁移 API（自动将 Supabase 知识库转为向量存入 Vectorize）
+curl -X POST https://your-worker.workers.dev/api/knowledge/migrate
+```
+
+**返回示例：**
+```json
+{
+  "success": true,
+  "message": "Migration completed: 20 succeeded, 0 failed",
+  "migrated": 20,
+  "failed": 0
+}
+```
+
+**方法 B：手动迁移脚本**
+
+```javascript
+// 在本地运行的迁移脚本示例
+const WORKER_URL = 'https://your-worker.workers.dev';
+
+async function migrateKnowledge() {
+  // 1. 从 Supabase 获取所有知识条目
+  const { data } = await supabase.from('knowledge_base').select('*');
+  
+  // 2. 逐条调用 API 重新保存（会自动生成向量）
+  for (const item of data) {
+    await fetch(`${WORKER_URL}/api/knowledge/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: item.metadata?.question || item.content,
+        answer: item.metadata?.answer || '',
+        metadata: { migrated: true }
+      })
+    });
+  }
+}
+```
+
+#### 步骤 4：验证 Vectorize
+
+**测试向量搜索：**
+```bash
+# 发送测试消息，检查是否使用了向量搜索
+curl -X POST https://your-worker.workers.dev/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "你们有什么产品？", "sessionId": "test-123"}'
+```
+
+**检查响应：**
+- AI 回复应该基于知识库内容
+- 查看 Worker 日志：`wrangler tail`
+- 日志中应该显示 "Vector search results: X items"
+
+**查看 Vectorize 状态：**
+```bash
+# 列出所有向量索引
+wrangler vectorize list
+
+# 查看索引详情
+wrangler vectorize get xktruck-knowledge
+```
+
+#### 工作原理
+
+```
+用户提问："VOLVO 大灯多少钱？"
+    ↓
+1. 提取关键词："VOLVO headlamp price"
+    ↓
+2. 生成查询向量 (DeepSeek Embedding API)
+   [0.15, -0.42, 0.81, ..., 0.23]  // 1024 个数字
+    ↓
+3. Vectorize 相似度搜索
+   找到最相似的 3 条知识（score >= 0.7）
+    ↓
+4. 返回相关知识给 AI
+    ↓
+5. AI 基于知识生成回答 (DeepSeek Chat)
+```
+
+#### 故障回退机制
+
+如果 Vectorize 不可用，系统会自动回退到 Supabase 全文搜索：
+
+```javascript
+// 代码中的回退逻辑
+try {
+  // 尝试向量搜索
+  knowledgeContext = await searchVectors(env, query, 3);
+} catch (vectorError) {
+  console.error('Vector search failed, falling back to text search');
+  // 回退到全文搜索
+  knowledgeContext = await supabaseTextSearch(env, query, 3);
+}
+```
+
+这确保即使 Vectorize 出现问题，AI 客服仍能正常工作。
+
+#### 费用说明
+
+| 项目 | 免费额度 | 超出后 |
+|------|----------|--------|
+| Vectorize 存储 | 500 万向量/月 | $0.05/100 万向量 |
+| Vectorize 查询 | 3000 万查询/月 | $0.01/100 万查询 |
+| DeepSeek Embedding | 按量付费 | $0.002/M tokens |
+
+**预估成本：**
+- 知识库 100 条 × 平均 200 tokens = 20,000 tokens ≈ $0.00004
+- 每天 100 次查询 × 30 天 = 3,000 次查询（远低于免费额度）
+- **月成本**: 几乎为 $0
+
+#### 常见问题
+
+**Q: 为什么是 1024 维度？**
+A: DeepSeek Embedding 模型输出 1024 维向量，必须匹配。
+
+**Q: 什么是余弦相似度（cosine）？**
+A: 计算两个向量夹角的余弦值，范围 -1 到 1，越接近 1 越相似。
+
+**Q: 为什么阈值是 0.7？**
+A: 经验值，0.7 以上表示比较相关，可根据实际效果调整。
+
+**Q: 如何更新知识库？**
+A: 
+- 自动学习：AI 对话中自动添加新知识
+- 手动添加：`POST /api/knowledge/add`
+- 人工审核：管理后台审核对话后添加
+
+**Q: 如何删除错误的知识？**
+A: 目前需要在 Supabase 中删除，然后重新迁移到 Vectorize。
+
+**Q: Vectorize 和 Supabase 知识库的关系？**
+A:
+- Supabase：存储原始文本（可编辑、可查询）
+- Vectorize：存储向量索引（只用于搜索）
+- 两者同步：添加知识时同时存入两边
 
 ---
 
@@ -468,22 +697,224 @@ cd xk-truck-frontend
 npm run sync:products
 ```
 
+### 12.4 知识库管理
+
+**手动添加知识：**
+```bash
+curl -X POST https://your-worker.workers.dev/api/knowledge/add \
+  -H "Content-Type: application/json" \
+  -d '{
+    "question": "What is your MOQ?",
+    "answer": "Our minimum order quantity is 5-10 pieces for most items.",
+    "metadata": {"category": "faq"}
+  }'
+```
+
+**审核对话并入库：**
+```bash
+# 获取待审核对话
+curl https://your-worker.workers.dev/api/knowledge/pending
+
+# 审核并入库
+curl -X POST https://your-worker.workers.dev/api/knowledge/review \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conversationId": "uuid",
+    "approved": true,
+    "question": "用户问题",
+    "answer": "AI回复"
+  }'
+```
+
+### 12.5 查看 Worker 日志
+
+```bash
+cd xk-truck-worker
+wrangler tail
+```
+
+### 12.6 健康检查
+
+```bash
+curl https://your-worker.workers.dev/api/health
+```
+
 ---
 
-## 十三、部署状态
+## 十三、API 端点文档
+
+### 13.1 询盘 API
+
+**POST /api/inquiry**
+- 提交询盘表单
+- 保存到 Supabase，发送邮件通知
+
+### 13.2 AI 客服 API
+
+**POST /api/chat**
+- 普通对话（JSON 响应）
+
+**POST /api/chat/stream**
+- 流式对话（SSE 响应）
+- 实时显示 AI 回复
+
+### 13.3 设置 API
+
+**GET /api/settings**
+- 获取 AI 设置（开关状态、欢迎消息等）
+
+**PUT /api/settings**
+- 更新 AI 设置（需要 Authorization header）
+
+### 13.4 管理后台 API
+
+**GET /api/admin/stats**
+- 获取统计数据（今日询盘、总询盘、产品数）
+
+**GET /api/admin/inquiries**
+- 获取询盘列表（支持分页、筛选、搜索）
+
+**PUT /api/admin/inquiries/:id**
+- 更新询盘状态
+
+**GET /api/admin/conversations/sessions**
+- 获取会话列表
+
+**GET /api/admin/conversations/:sessionId**
+- 获取会话详情
+
+### 13.5 WhatsApp API
+
+**GET /api/whatsapp/webhook**
+- Webhook 验证（Meta 调用）
+
+**POST /api/whatsapp/webhook**
+- 接收 WhatsApp 消息
+
+**GET /api/whatsapp/conversations**
+- 获取对话列表
+
+**GET /api/whatsapp/conversations/:id/messages**
+- 获取对话消息
+
+### 13.6 知识库 API
+
+**GET /api/knowledge/pending**
+- 获取待审核的对话
+
+**POST /api/knowledge/review**
+- 审核对话并决定是否入库
+
+**POST /api/knowledge/add**
+- 手动添加知识条目
+
+**POST /api/knowledge/migrate**
+- 迁移现有知识库到 Vectorize
+
+### 13.7 健康检查
+
+**GET /api/health**
+- 服务状态检查
+
+---
+
+## 十四、AI 安全配置（重要）
+
+### 14.1 为什么需要配置
+
+AI 客服的安全规则已添加到代码中，需要重新部署 Worker 使其生效。
+
+**安全机制：**
+- ✅ 代码层检测：自动识别敏感问题（价格、规格、质保、运输、库存）
+- ✅ 提示词规则：硬编码在 `deepseek.js` 中，告诉 AI 什么该说、什么不该说
+
+### 14.2 部署步骤（1 分钟）
+
+```bash
+cd xk-truck-worker
+wrangler deploy
+```
+
+**期望结果：**
+```
+✅ Successfully deployed
+URL: https://xk-truck-api.harry-zhang592802.workers.dev
+```
+
+### 14.3 测试验证（1 分钟）
+
+```bash
+node test-safety.js
+```
+
+**期望结果：**
+```
+✅ 通过: 9
+❌ 失败: 0
+🎉 所有测试通过！
+```
+
+### 14.4 网站测试
+
+访问 https://xk-truck.cn，测试：
+- "VOLVO 大灯多少钱？" → 应该引导联系（不瞎编价格）
+- "你们有 VOLVO 配件吗？" → 可以直接回答
+
+### 14.5 查看日志
+
+```bash
+wrangler tail
+```
+
+应该看到：
+- `✅ Vector search results: 3 items` - 向量搜索成功
+- `🛡️ Sensitive question detected: pricing` - 检测到敏感问题
+
+### 14.6 修改系统提示词
+
+如需修改 AI 的行为，编辑文件：
+```
+xk-truck-worker/src/lib/deepseek.js
+```
+
+找到 `DEFAULT_SYSTEM_PROMPT` 常量，修改后重新部署：
+```bash
+wrangler deploy
+```
+
+### 14.7 相关文档
+
+- `docs/AI-SAFETY.md` - 安全验证方法
+- `xk-truck-worker/test-safety.js` - 测试脚本
+- `xk-truck-worker/src/lib/deepseek.js` - 系统提示词位置
+
+---
+
+## 十五、部署状态
 
 ### 基础部署
 - ✅ Cloudflare 域名配置
 - ✅ 前端部署（Cloudflare Pages）
 - ✅ 后端部署（Cloudflare Worker）
-- ✅ 知识库导入（Supabase）
-- ⏸️ WhatsApp Webhook（暂停，需海外手机验证）
+- ✅ Vectorize 向量数据库配置
+- ✅ 知识库导入（Supabase + Vectorize）
+- ⏸️ WhatsApp Webhook（代码已实现，需配置 API）
 
 ### SEO 配置
 - ✅ robots.txt 和 sitemap.xml
 - ✅ Google Search Console 验证
 - ✅ Schema.org 结构化数据
+- ✅ Google Analytics 4
 - ⏳ Bing Webmaster Tools
+
+### AI 功能
+- ✅ AI 客服对话（普通 + 流式）
+- ✅ RAG 知识库检索（Vectorize + Supabase）
+- ✅ 知识库学习功能
+- ✅ 多语言支持
+- ✅ 邮件通知
+- ✅ 敏感问题检测（代码层）
+- ⏳ 系统提示词配置（需执行 SQL）
 
 ---
 

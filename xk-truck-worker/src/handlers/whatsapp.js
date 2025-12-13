@@ -99,8 +99,8 @@ async function handleIncomingMessage(request, env) {
     const settings = await getSettings(supabase);
     
     if (settings?.ai_enabled) {
-      // AI 自动回复
-      const aiResponse = await generateAIResponse(env, messageData.text, conversation.id, supabase);
+      // AI 自动回复（返回回复内容和是否使用了知识库）
+      const { response: aiResponse, knowledgeUsed } = await generateAIResponse(env, messageData.text, conversation.id, supabase);
       
       // 发送回复
       await sendWhatsAppMessage(env, messageData.from, aiResponse);
@@ -115,6 +115,17 @@ async function handleIncomingMessage(request, env) {
         text: aiResponse,
         contactName: 'XKTRUCK AI'
       }, 'outgoing');
+      
+      // 自动学习（当未使用知识库时）
+      if (settings?.auto_learn_enabled && !knowledgeUsed) {
+        const { autoLearnFromConversation } = await import('./knowledge-learn.js');
+        autoLearnFromConversation(env, conversation.id, messageData.text, aiResponse, {
+          source: 'whatsapp',
+          phoneNumber: messageData.from
+        }).catch(err => {
+          console.error('WhatsApp auto-learn failed:', err);
+        });
+      }
     }
     
     return new Response(JSON.stringify({ status: 'ok' }), {
@@ -172,6 +183,41 @@ async function sendWhatsAppMessage(env, to, text) {
 }
 
 /**
+ * 检测敏感问题（与 chat.js 保持一致）
+ */
+function checkSensitiveQuestion(message) {
+  const lowerMessage = message.toLowerCase();
+  
+  const sensitiveKeywords = {
+    pricing: ['price', 'cost', 'how much', '价格', '多少钱', '费用', 'precio', 'cuánto'],
+    specifications: ['specification', 'spec', 'oe number', 'oe编号', '规格', 'especificación'],
+    warranty: ['warranty', 'guarantee', '质保', '保修', 'garantía'],
+    shipping: ['shipping', 'delivery', 'lead time', '运输', '交货', '发货', 'envío'],
+    stock: ['stock', 'availability', 'in stock', '库存', '有货', 'disponible']
+  };
+  
+  let isSensitive = false;
+  for (const [category, keywords] of Object.entries(sensitiveKeywords)) {
+    if (keywords.some(keyword => lowerMessage.includes(keyword))) {
+      isSensitive = true;
+      console.log(`[WhatsApp] Sensitive question detected: ${category}`);
+      break;
+    }
+  }
+  
+  if (!isSensitive) {
+    return null;
+  }
+  
+  return `Thank you for your inquiry! For accurate information, please contact us:
+
+📧 Email: harry.zhang592802@gmail.com
+📱 WhatsApp: +86 130-6287-0118
+
+Our team will provide you with accurate pricing, specifications, and availability.`;
+}
+
+/**
  * 生成 AI 回复
  */
 async function generateAIResponse(env, userMessage, conversationId, supabase) {
@@ -184,19 +230,48 @@ async function generateAIResponse(env, userMessage, conversationId, supabase) {
       .order('created_at', { ascending: false })
       .limit(10);
     
-    // 获取知识库
-    const { data: knowledge } = await supabase
-      .from('knowledge_base')
-      .select('question, answer')
-      .limit(20);
+    // 使用统一的知识库查询（向量搜索 + 全文搜索）
+    const { queryKnowledgeBase, extractSearchKeywords } = await import('../lib/supabase.js');
+    const { generateRAGResponse } = await import('../lib/deepseek.js');
     
-    // 构建上下文
-    const knowledgeContext = knowledge?.map(k => `Q: ${k.question}\nA: ${k.answer}`).join('\n\n') || '';
+    // 提取搜索关键词
+    let searchQuery = userMessage;
+    try {
+      searchQuery = await extractSearchKeywords(env, userMessage);
+    } catch (err) {
+      console.log('Keyword extraction failed:', err);
+    }
     
-    const historyContext = history?.reverse().map(m => 
-      `${m.direction === 'incoming' ? 'Customer' : 'Assistant'}: ${m.content}`
-    ).join('\n') || '';
+    // 查询知识库（使用向量搜索）
+    let knowledgeContext = [];
+    try {
+      knowledgeContext = await queryKnowledgeBase(env, searchQuery, 3);
+    } catch (kbError) {
+      console.error('Knowledge base query failed:', kbError);
+    }
+
+    // 安全检查：如果没有知识库且是敏感问题，返回安全回复
+    if (knowledgeContext.length === 0) {
+      const safeReply = checkSensitiveQuestion(userMessage);
+      if (safeReply) {
+        console.log('[WhatsApp] Returning safe reply for sensitive question');
+        return {
+          response: safeReply,
+          knowledgeUsed: false
+        };
+      }
+    }
     
+    // 构建消息历史
+    const messages = history?.reverse().map(m => ({
+      role: m.direction === 'incoming' ? 'user' : 'assistant',
+      content: m.content
+    })) || [];
+    
+    // 添加当前消息
+    messages.push({ role: 'user', content: userMessage });
+    
+    // 系统提示词（WhatsApp 专用）
     const systemPrompt = `You are XKTRUCK's professional customer service assistant on WhatsApp.
 
 COMPANY INFO:
@@ -205,26 +280,30 @@ COMPANY INFO:
 - Factory: 35,000㎡ in China
 - Experience: 15+ years in truck parts industry
 
-KNOWLEDGE BASE:
-${knowledgeContext}
-
-CONVERSATION HISTORY:
-${historyContext}
-
 GUIDELINES:
 1. Be professional, friendly, and helpful
-2. Keep responses concise (suitable for WhatsApp)
+2. Keep responses concise (suitable for WhatsApp, max 2-3 paragraphs)
 3. If asked about specific products, provide general info and offer to send details
 4. For pricing inquiries, ask for product details and quantity
 5. Always offer to help further
-6. Respond in the same language as the customer`;
+6. Respond in the same language as the customer
+7. Use knowledge base information when available`;
 
-    const response = await generateChatResponse(env, [{ role: 'user', content: userMessage }], systemPrompt);
-    return response || "Thank you for your message. Our team will get back to you shortly. For urgent inquiries, please email harry.zhang592802@gmail.com";
+    // 使用 RAG 生成回复
+    const response = await generateRAGResponse(env, messages, knowledgeContext, systemPrompt);
+    
+    // 返回回复和是否使用了知识库
+    return {
+      response: response || "Thank you for your message. Our team will get back to you shortly. For urgent inquiries, please email harry.zhang592802@gmail.com",
+      knowledgeUsed: knowledgeContext.length > 0
+    };
     
   } catch (error) {
     console.error('AI response error:', error);
-    return "Thank you for contacting XKTRUCK! Our team will respond to your inquiry shortly. For immediate assistance, please email harry.zhang592802@gmail.com";
+    return {
+      response: "Thank you for contacting XKTRUCK! Our team will respond to your inquiry shortly. For immediate assistance, please email harry.zhang592802@gmail.com",
+      knowledgeUsed: false
+    };
   }
 }
 

@@ -7,6 +7,51 @@ import { generateRAGResponse, extractSearchKeywords, generateStreamResponse } fr
 import { sendChatNotification } from '../lib/email.js';
 
 /**
+ * 检测敏感问题（价格、规格等）
+ * 如果是敏感问题且没有知识库，返回安全回复
+ */
+function checkSensitiveQuestion(message) {
+  const lowerMessage = message.toLowerCase();
+  
+  // 敏感关键词列表
+  const sensitiveKeywords = {
+    pricing: ['price', 'cost', 'how much', '价格', '多少钱', '费用', 'precio', 'cuánto'],
+    specifications: ['specification', 'spec', 'oe number', 'oe编号', '规格', 'especificación'],
+    warranty: ['warranty', 'guarantee', '质保', '保修', 'garantía'],
+    shipping: ['shipping', 'delivery', 'lead time', '运输', '交货', '发货', 'envío'],
+    stock: ['stock', 'availability', 'in stock', '库存', '有货', 'disponible']
+  };
+  
+  // 检测是否包含敏感关键词
+  let isSensitive = false;
+  for (const [category, keywords] of Object.entries(sensitiveKeywords)) {
+    if (keywords.some(keyword => lowerMessage.includes(keyword))) {
+      isSensitive = true;
+      console.log(`Sensitive question detected: ${category}`);
+      break;
+    }
+  }
+  
+  if (!isSensitive) {
+    return null; // 不是敏感问题，可以让 AI 自由回答
+  }
+  
+  // 返回安全的标准回复
+  return `Thank you for your inquiry! For accurate and up-to-date information, please contact us directly:
+
+📧 **Email**: harry.zhang592802@gmail.com
+📱 **WhatsApp**: +86 130-6287-0118
+
+Our team will provide you with:
+✅ Accurate pricing and quotes
+✅ Detailed product specifications
+✅ Current stock availability
+✅ Shipping options and lead times
+
+We typically respond within 24 hours. For urgent inquiries, WhatsApp is the fastest way to reach us!`;
+}
+
+/**
  * 处理 AI 客服对话
  */
 export async function handleChat(request, env) {
@@ -74,6 +119,32 @@ export async function handleChat(request, env) {
       // 继续，不影响主流程
     }
 
+    // 4. 安全检查：如果没有知识库且是敏感问题，返回安全回复
+    if (knowledgeContext.length === 0) {
+      const safeReply = checkSensitiveQuestion(message);
+      if (safeReply) {
+        // 保存安全回复
+        await saveConversation(env, {
+          sessionId,
+          role: 'assistant',
+          message: safeReply,
+          isAi: true,
+          metadata: { safeMode: true, reason: 'no_knowledge_sensitive' }
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          aiEnabled: true,
+          reply: safeReply,
+          sessionId,
+          safeMode: true
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     // 4. 构建消息历史（清理 Markdown 格式）
     const cleanText = (text) => text ? text.replace(/\*\*/g, '').replace(/\*/g, '').replace(/#{1,6}\s/g, '').trim() : '';
     
@@ -113,12 +184,25 @@ export async function handleChat(request, env) {
       });
     }
 
-    return new Response(JSON.stringify({
+    // 构建响应（开发环境包含调试信息）
+    const response = {
       success: true,
       aiEnabled: true,
       reply: cleanReply,
       sessionId
-    }), {
+    };
+
+    // 开发环境：添加调试信息
+    if (env.ENVIRONMENT === 'development' || !env.ENVIRONMENT) {
+      response.debug = {
+        knowledgeUsed: knowledgeContext.length > 0,
+        knowledgeCount: knowledgeContext.length,
+        searchMethod: knowledgeContext[0]?.score ? 'vector' : 'text',
+        scores: knowledgeContext.map(k => k.score).filter(Boolean)
+      };
+    }
+
+    return new Response(JSON.stringify(response), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -194,6 +278,32 @@ export async function handleChatStream(request, env) {
       knowledgeContext = await queryKnowledgeBase(env, searchQuery, 3);
     } catch (kbError) {
       console.error('Knowledge base query failed:', kbError);
+    }
+
+    // 安全检查：如果没有知识库且是敏感问题，返回安全回复
+    if (knowledgeContext.length === 0) {
+      const safeReply = checkSensitiveQuestion(message);
+      if (safeReply) {
+        // 保存安全回复
+        await saveConversation(env, {
+          sessionId,
+          role: 'assistant',
+          message: safeReply,
+          isAi: true,
+          metadata: { safeMode: true, reason: 'no_knowledge_sensitive' }
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          aiEnabled: true,
+          reply: safeReply,
+          sessionId,
+          safeMode: true
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     }
 
     // 构建消息历史（清理 Markdown 格式）
