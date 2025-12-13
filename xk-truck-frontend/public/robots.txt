@@ -1,22 +1,28 @@
-# robots.txt for xk-truck.cn
+# https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Allow: /
 
-# AI Search Engine Crawlers
+# AI Crawlers
 User-agent: GPTBot
 Allow: /
 
 User-agent: ChatGPT-User
 Allow: /
 
-User-agent: PerplexityBot
-Allow: /
-
-User-agent: ClaudeBot
-Allow: /
-
 User-agent: Google-Extended
 Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+# Disallow admin
+Disallow: /admin
 
 # Sitemap
 Sitemap: https://xk-truck.cn/sitemap-index.xml

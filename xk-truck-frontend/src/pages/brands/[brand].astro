@@ -2,6 +2,14 @@
 import Layout from '../../layouts/Layout.astro';
 import { getProducts, getBrands } from '../../lib/supabase';
 
+// 生成静态路径
+export async function getStaticPaths() {
+  const brands = ['volvo', 'scania', 'mercedes-benz', 'man', 'iveco', 'renault', 'daf', 'ford'];
+  return brands.map(brand => ({
+    params: { brand }
+  }));
+}
+
 // 获取品牌参数
 const { brand } = Astro.params;
 
@@ -82,7 +90,7 @@ if (!brandInfo) {
 
 // 获取该品牌的产品
 const productsResult = await getProducts({ brand: brand?.toLowerCase() });
-const products = productsResult.data || [];
+const products = productsResult.products || [];
 
 // 按分类分组产品
 const productsByCategory = products.reduce((acc, product) => {
