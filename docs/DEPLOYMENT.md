@@ -69,7 +69,8 @@
 - Project name：XKTRUCK
 - Database password：YyIIytmU9B8EHoEC
 - Region：Asia-Pacific
-- Project URL：https://xktruck.supabase.co
+- Project ID：ltqnikmoeroelfrwcfqr
+- Project URL：https://ltqnikmoeroelfrwcfqr.supabase.co
 - Anon Key (Publishable)：sb_publishable_VjrbThKmSR4LvYEeotnMlw_d8IZqYs4
 - Service Role Key (Secret)：sb_secret_CUSHbAvZlq7M-4OJgXby6g_cEV5aYHd
 
@@ -453,7 +454,7 @@ cd xk-truck-worker
 
 # Supabase
 wrangler secret put SUPABASE_URL
-# 输入: https://xktruck.supabase.co
+# 输入: https://ltqnikmoeroelfrwcfqr.supabase.co
 
 wrangler secret put SUPABASE_SERVICE_KEY
 # 输入: sb_secret_xxxxx

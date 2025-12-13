@@ -4,7 +4,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // 从环境变量获取配置
-const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || 'https://xktruck.supabase.co';
+const supabaseUrl = import.meta.env.PUBLIC_SUPABASE_URL || 'https://ltqnikmoeroelfrwcfqr.supabase.co';
 const supabaseAnonKey = import.meta.env.PUBLIC_SUPABASE_ANON_KEY || '';
 
 // 创建 Supabase 客户端（如果没有 key 则创建一个 mock 客户端）
