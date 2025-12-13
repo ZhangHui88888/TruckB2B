@@ -475,6 +475,8 @@ export default defineConfig({
 
 ### 需要追踪的指标
 
+> 最后更新：2025-12-13
+
 #### Google Search Console
 - [ ] 索引覆盖率
 - [ ] 品牌页面索引状态
