@@ -212,7 +212,7 @@ const collectionSchema = {
       ? categoryFilter
       : "All Products",
   "description": `Browse ${totalProducts || displayProducts.length}+ heavy truck lights${brandFilter ? ` for ${brandFilter.toUpperCase()}` : ''}${categoryFilter ? ` in ${categoryFilter} category` : ''}.`,
-  "url": `https://xk-truck.cn/products${brandFilter ? `?brand=${brandFilter}` : ''}${categoryFilter ? `?category=${categoryFilter}` : ''}`,
+  "url": `https://xk-truck.cn/products${categoryFilter ? `?category=${categoryFilter}` : ''}`,
   "isPartOf": {
     "@id": "https://xk-truck.cn/#website"
   },
@@ -276,19 +276,14 @@ const collectionSchema = {
             <div class="space-y-2">
               {displayBrands.map(brand => {
                 const brandSlug = brand.toLowerCase().replace(/\s+/g, '-');
-                const isActive = brandFilter === brandSlug;
                 return (
                   <a 
-                    href={isActive ? '/products' : `/products?brand=${brandSlug}`}
-                    class={`flex items-center gap-2 cursor-pointer hover:text-primary transition-colors ${isActive ? 'text-primary font-medium' : 'text-gray-700'}`}
+                    href={`/brands/${brandSlug}`}
+                    class="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors text-gray-700"
                   >
-                    <span class={`w-4 h-4 rounded border flex items-center justify-center ${isActive ? 'bg-primary border-primary' : 'border-gray-300'}`}>
-                      {isActive && (
-                        <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
-                        </svg>
-                      )}
-                    </span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
                     <span>{brand}</span>
                   </a>
                 );

@@ -1,0 +1,299 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getProducts, getBrands } from '../../lib/supabase';
+
+// 获取品牌参数
+const { brand } = Astro.params;
+
+// 品牌SEO配置
+const brandSEO = {
+  'volvo': {
+    title: 'VOLVO Truck Lights & Parts',
+    description: 'Premium VOLVO truck lights supplier - headlamps, tail lamps, fog lamps, mirrors for FH, FM, FMX series. OEM quality, factory direct pricing. 1000+ VOLVO parts in stock.',
+    h1: 'VOLVO Truck Lights & Aftermarket Parts',
+    intro: 'Professional supplier of VOLVO truck lights and body parts. We specialize in headlamps, tail lamps, fog lamps, and mirrors for VOLVO FH, FM, FMX, and FE series trucks. All parts meet OEM quality standards with competitive factory pricing.',
+    keywords: ['VOLVO truck lights', 'VOLVO headlamp', 'VOLVO tail lamp', 'VOLVO fog lamp', 'VOLVO mirror'],
+    models: ['FH4', 'FH5', 'FM', 'FMX', 'FE']
+  },
+  'scania': {
+    title: 'SCANIA Truck Lights & Parts',
+    description: 'Quality SCANIA truck lights supplier - headlamps, tail lamps, fog lamps, mirrors for R, S, P, G series. OEM quality aftermarket parts, wholesale pricing.',
+    h1: 'SCANIA Truck Lights & Aftermarket Parts',
+    intro: 'Leading supplier of SCANIA truck lights and body parts. We offer comprehensive range of headlamps, tail lamps, fog lamps, and mirrors for SCANIA R, S, P, and G series trucks. Factory direct pricing with OEM quality guarantee.',
+    keywords: ['SCANIA truck lights', 'SCANIA headlamp', 'SCANIA tail lamp', 'SCANIA fog lamp', 'SCANIA mirror'],
+    models: ['R Series', 'S Series', 'P Series', 'G Series']
+  },
+  'mercedes-benz': {
+    title: 'MERCEDES-BENZ Truck Lights & Parts',
+    description: 'Premium MERCEDES-BENZ truck lights - headlamps, tail lamps, fog lamps for Actros, Arocs, Atego. OEM quality aftermarket parts, competitive wholesale pricing.',
+    h1: 'MERCEDES-BENZ Truck Lights & Parts',
+    intro: 'Professional MERCEDES-BENZ truck lights supplier. Specializing in headlamps, tail lamps, fog lamps, and mirrors for Actros, Arocs, and Atego series. All parts manufactured to OEM specifications.',
+    keywords: ['MERCEDES-BENZ truck lights', 'Actros headlamp', 'MERCEDES tail lamp', 'Actros fog lamp'],
+    models: ['Actros MP4', 'Actros MP5', 'Arocs', 'Atego']
+  },
+  'man': {
+    title: 'MAN Truck Lights & Parts',
+    description: 'Quality MAN truck lights supplier - headlamps, tail lamps, fog lamps for TGX, TGS, TGL series. OEM quality, factory direct pricing.',
+    h1: 'MAN Truck Lights & Aftermarket Parts',
+    intro: 'Trusted supplier of MAN truck lights and body parts. Complete range of headlamps, tail lamps, fog lamps, and mirrors for MAN TGX, TGS, and TGL series trucks.',
+    keywords: ['MAN truck lights', 'MAN TGX headlamp', 'MAN tail lamp', 'MAN fog lamp'],
+    models: ['TGX', 'TGS', 'TGL', 'TGM']
+  },
+  'iveco': {
+    title: 'IVECO Truck Lights & Parts',
+    description: 'IVECO truck lights supplier - headlamps, tail lamps, fog lamps for Stralis, S-Way, Eurocargo. OEM quality aftermarket parts.',
+    h1: 'IVECO Truck Lights & Aftermarket Parts',
+    intro: 'Professional IVECO truck lights supplier. Wide selection of headlamps, tail lamps, fog lamps, and mirrors for IVECO Stralis, S-Way, and Eurocargo series.',
+    keywords: ['IVECO truck lights', 'IVECO Stralis headlamp', 'IVECO tail lamp', 'IVECO fog lamp'],
+    models: ['Stralis', 'S-Way', 'Eurocargo', 'Daily']
+  },
+  'renault': {
+    title: 'RENAULT Truck Lights & Parts',
+    description: 'RENAULT truck lights supplier - headlamps, tail lamps, fog lamps for T, C, K series. OEM quality, competitive pricing.',
+    h1: 'RENAULT Truck Lights & Aftermarket Parts',
+    intro: 'Quality RENAULT truck lights supplier. Comprehensive range of headlamps, tail lamps, fog lamps, and mirrors for RENAULT T, C, and K series trucks.',
+    keywords: ['RENAULT truck lights', 'RENAULT headlamp', 'RENAULT tail lamp', 'RENAULT fog lamp'],
+    models: ['T Series', 'C Series', 'K Series', 'D Series']
+  },
+  'daf': {
+    title: 'DAF Truck Lights & Parts',
+    description: 'DAF truck lights supplier - headlamps, tail lamps, fog lamps for XF, CF, LF series. OEM quality aftermarket parts, factory pricing.',
+    h1: 'DAF Truck Lights & Aftermarket Parts',
+    intro: 'Leading DAF truck lights supplier. Full range of headlamps, tail lamps, fog lamps, and mirrors for DAF XF, CF, and LF series trucks.',
+    keywords: ['DAF truck lights', 'DAF XF headlamp', 'DAF tail lamp', 'DAF fog lamp'],
+    models: ['XF', 'CF', 'LF']
+  },
+  'ford': {
+    title: 'FORD Truck Lights & Parts',
+    description: 'FORD truck lights supplier - headlamps, tail lamps, fog lamps for Cargo series. OEM quality aftermarket parts.',
+    h1: 'FORD Truck Lights & Aftermarket Parts',
+    intro: 'Professional FORD truck lights supplier. Quality headlamps, tail lamps, fog lamps, and mirrors for FORD Cargo series trucks.',
+    keywords: ['FORD truck lights', 'FORD Cargo headlamp', 'FORD tail lamp', 'FORD fog lamp'],
+    models: ['Cargo']
+  }
+};
+
+// 获取品牌信息
+const brandInfo = brandSEO[brand?.toLowerCase() || ''];
+
+if (!brandInfo) {
+  return Astro.redirect('/products');
+}
+
+// 获取该品牌的产品
+const productsResult = await getProducts({ brand: brand?.toLowerCase() });
+const products = productsResult.data || [];
+
+// 按分类分组产品
+const productsByCategory = products.reduce((acc, product) => {
+  const category = product.category_name || 'Other';
+  if (!acc[category]) acc[category] = [];
+  acc[category].push(product);
+  return acc;
+}, {} as Record<string, typeof products>);
+
+// 品牌结构化数据
+const brandSchema = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": brandInfo.title,
+  "description": brandInfo.description,
+  "url": `https://xk-truck.cn/brands/${brand}`,
+  "isPartOf": {
+    "@type": "WebSite",
+    "@id": "https://xk-truck.cn/#website"
+  },
+  "about": {
+    "@type": "Brand",
+    "name": brand?.toUpperCase()
+  }
+};
+
+// 面包屑
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://xk-truck.cn"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Brands",
+      "item": "https://xk-truck.cn/products"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": brand?.toUpperCase(),
+      "item": `https://xk-truck.cn/brands/${brand}`
+    }
+  ]
+};
+---
+
+<Layout 
+  title={brandInfo.title}
+  description={brandInfo.description}
+  canonical={`https://xk-truck.cn/brands/${brand}`}
+  schema={[brandSchema, breadcrumbSchema]}
+>
+  <!-- Breadcrumb -->
+  <nav class="bg-gray-100 py-3">
+    <div class="container mx-auto px-4">
+      <ol class="flex items-center gap-2 text-sm text-gray-600">
+        <li><a href="/" class="hover:text-primary">Home</a></li>
+        <li>/</li>
+        <li><a href="/products" class="hover:text-primary">Products</a></li>
+        <li>/</li>
+        <li class="text-gray-900 font-medium">{brand?.toUpperCase()}</li>
+      </ol>
+    </div>
+  </nav>
+
+  <!-- Brand Header -->
+  <section class="bg-gradient-to-r from-primary to-primary-dark text-white py-16">
+    <div class="container mx-auto px-4">
+      <h1 class="text-4xl md:text-5xl font-bold mb-4">{brandInfo.h1}</h1>
+      <p class="text-xl text-blue-100 max-w-3xl">{brandInfo.intro}</p>
+      
+      <!-- Models -->
+      <div class="mt-6 flex flex-wrap gap-2">
+        {brandInfo.models.map(model => (
+          <span class="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full text-sm">
+            {model}
+          </span>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Products by Category -->
+  <section class="py-16">
+    <div class="container mx-auto px-4">
+      <div class="mb-8">
+        <h2 class="text-3xl font-bold mb-2">
+          {brand?.toUpperCase()} Parts Catalog
+        </h2>
+        <p class="text-gray-600">
+          {products.length} products available
+        </p>
+      </div>
+
+      {Object.keys(productsByCategory).length > 0 ? (
+        Object.entries(productsByCategory).map(([category, categoryProducts]) => (
+          <div class="mb-12">
+            <h3 class="text-2xl font-bold mb-6 pb-2 border-b-2 border-primary">
+              {category}
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {categoryProducts.map(product => (
+                <a 
+                  href={`/products/${product.slug}`}
+                  class="bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow overflow-hidden group"
+                >
+                  <div class="aspect-square bg-gray-100 overflow-hidden">
+                    <img 
+                      src={product.main_image_url || '/images/placeholder.jpg'}
+                      alt={product.name}
+                      class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  <div class="p-4">
+                    <h4 class="font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                      {product.name}
+                    </h4>
+                    <p class="text-sm text-gray-600 mb-3 line-clamp-2">
+                      {product.short_description || product.description}
+                    </p>
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs text-gray-500">OE: {product.oe_number}</span>
+                      <span class="text-primary font-medium text-sm">View Details →</span>
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        ))
+      ) : (
+        <div class="text-center py-12">
+          <p class="text-gray-600 mb-4">No products available yet for this brand.</p>
+          <a href="/contact" class="text-primary hover:underline">
+            Contact us for specific part inquiries
+          </a>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <!-- Why Choose Us -->
+  <section class="bg-gray-50 py-16">
+    <div class="container mx-auto px-4">
+      <h2 class="text-3xl font-bold text-center mb-12">
+        Why Choose Our {brand?.toUpperCase()} Parts?
+      </h2>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="text-center">
+          <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">OEM Quality</h3>
+          <p class="text-gray-600">All parts manufactured to original equipment specifications</p>
+        </div>
+        <div class="text-center">
+          <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Factory Direct</h3>
+          <p class="text-gray-600">Competitive wholesale pricing from our 35,000㎡ factory</p>
+        </div>
+        <div class="text-center">
+          <div class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </div>
+          <h3 class="text-xl font-semibold mb-2">Large Inventory</h3>
+          <p class="text-gray-600">1000+ parts in stock, ready for immediate shipping</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="bg-primary text-white py-12">
+    <div class="container mx-auto px-4 text-center">
+      <h2 class="text-3xl font-bold mb-4">
+        Need {brand?.toUpperCase()} Parts? Contact Us Today
+      </h2>
+      <p class="text-xl text-blue-100 mb-6">
+        Get a quote for your specific part requirements
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a 
+          href="/contact" 
+          class="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+        >
+          Request Quote
+        </a>
+        <a 
+          href="https://wa.me/8613062870118?text=Hi, I need {brand?.toUpperCase()} parts" 
+          target="_blank"
+          rel="noopener noreferrer"
+          class="bg-green-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-green-600 transition-colors"
+        >
+          WhatsApp Us
+        </a>
+      </div>
+    </div>
+  </section>
+</Layout>

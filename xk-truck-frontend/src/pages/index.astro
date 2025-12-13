@@ -166,7 +166,7 @@ const localBusinessSchema = {
       <div class="flex flex-wrap justify-center items-center gap-8 md:gap-12">
         {brands.map(brand => (
           <a 
-            href={`/products?brand=${brand.name.toLowerCase()}`}
+            href={`/brands/${brand.name.toLowerCase().replace(/\s+/g, '-')}`}
             class="text-gray-400 hover:text-primary font-bold text-lg md:text-xl transition-colors"
           >
             {brand.name}

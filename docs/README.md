@@ -155,7 +155,9 @@ git push origin main
 | 页面 | 状态 | 详细说明 |
 |------|------|---------|
 | **首页** | ✅ 完成 | **Hero 区**: 主标题、副标题、CTA 按钮<br>**品牌展示**: 8 个卡车品牌 Logo（VOLVO、SCANIA 等）<br>**产品分类**: 10 个分类卡片（大灯、后视镜等）<br>**特色优势**: 工厂规模、认证、经验<br>**CTA**: 联系我们、查看产品<br>**SEO**: 完整 meta 标签、Schema.org Organization |
-| **产品列表页** | ✅ 完成 | **URL**: `/products`<br>**筛选**: 品牌（8 个）、分类（10 个）<br>**搜索**: 产品名称、OE 编号、描述<br>**分页**: 每页 20 个产品<br>**排序**: 按 sort_order + 创建时间<br>**显示**: 产品卡片（图片、名称、品牌、OE 编号）<br>**SEO**: 动态 title/description、Schema.org ItemList |
+| **品牌列表页** | ✅ 完成 | **URL**: `/brands`<br>**展示**: 8 个品牌卡片（VOLVO、SCANIA 等）<br>**信息**: 品牌名称、简介、产品数量<br>**SEO**: 独立 meta 标签、BreadcrumbList Schema |
+| **品牌详情页** | ✅ 完成 | **URL**: `/brands/[brand]`（如 `/brands/volvo`）<br>**内容**: 品牌介绍、支持车型、产品分类展示<br>**SEO**: 每个品牌独特的 title/description/keywords<br>**结构化数据**: CollectionPage Schema<br>**优势**: 比 URL 参数（`?brand=volvo`）更利于 SEO |
+| **产品列表页** | ✅ 完成 | **URL**: `/products`<br>**筛选**: 品牌（链接到品牌页）、分类（10 个）<br>**搜索**: 产品名称、OE 编号、描述<br>**分页**: 每页 20 个产品<br>**排序**: 按 sort_order + 创建时间<br>**显示**: 产品卡片（图片、名称、品牌、OE 编号）<br>**SEO**: 动态 title/description、Schema.org ItemList |
 | **产品详情页** | ✅ 完成 | **URL**: `/products/[slug]`<br>**图片画廊**: 主图 + 多图切换<br>**基本信息**: 名称、品牌、分类、OE 编号<br>**规格参数**: 动态表格显示<br>**适配车型**: 列表显示<br>**特性**: 产品特点列表<br>**询盘按钮**: 跳转联系页面<br>**SEO**: Schema.org Product、动态 meta |
 | **关于我们** | ✅ 完成 | **URL**: `/about`<br>**公司介绍**: XKTRUCK 简介、历史<br>**工厂规模**: 35,000㎡ 厂房<br>**认证展示**: ADB、E-Mark 等<br>**统计数据**: 15+ 年经验、8 个品牌<br>**团队介绍**: 可选<br>**SEO**: Schema.org Organization + LocalBusiness |
 | **联系我们** | ✅ 完成 | **URL**: `/contact`<br>**联系表单**: 姓名、邮箱、公司、电话、主题、消息<br>**表单验证**: 前端 + 后端双重验证<br>**提交处理**: 保存到 Supabase + 发送邮件通知<br>**联系方式**: 邮箱、WhatsApp、地址<br>**FAQ**: 常见问题解答<br>**SEO**: Schema.org FAQPage |
@@ -388,12 +390,22 @@ git push origin main
 
 ### 🔍 SEO 优化
 
+#### 品牌页面 SEO（新增）
+
+| 功能 | 状态 | 详细说明 |
+|------|------|---------|
+| **独立品牌页面** | ✅ 完成 | **URL 结构**: `/brands/volvo`, `/brands/scania` 等<br>**优势**: 比 URL 参数（`/products?brand=volvo`）更利于 SEO<br>**支持品牌**: VOLVO, SCANIA, MERCEDES-BENZ, MAN, IVECO, RENAULT, DAF, FORD |
+| **品牌专属 SEO** | ✅ 完成 | **每个品牌独特配置**:<br>- 标题: "VOLVO Truck Lights & Parts \| XKTRUCK"<br>- 描述: 包含品牌关键词、产品类型、车型<br>- H1: 品牌专属标题<br>- 关键词: 品牌相关搜索词数组<br>- 支持车型: 显示为标签（如 FH4, FH5, FM） |
+| **URL 重定向** | ✅ 完成 | **301 重定向**: `/products?brand=volvo` → `/brands/volvo`<br>**实现**: Astro middleware<br>**保留参数**: 如有其他参数（category, search）则保留在产品页 |
+| **导航更新** | ✅ 完成 | **Header**: 添加 "Brands" 菜单项<br>**品牌栏**: 所有品牌链接更新为 `/brands/[brand]`<br>**产品页**: 面包屑、品牌标签链接到品牌页<br>**首页**: 品牌区域链接到品牌页 |
+| **结构化数据** | ✅ 完成 | **CollectionPage Schema**: 每个品牌页<br>**BreadcrumbList**: Home > Brands > [品牌名]<br>**Brand Schema**: 品牌信息 |
+
 #### 基础 SEO
 
 | 功能 | 状态 | 详细说明 |
 |------|------|---------|
 | **robots.txt** | ✅ 完成 | **位置**: `/public/robots.txt`<br>**内容**: 允许所有爬虫（User-agent: *）<br>**AI 爬虫**: 支持 GPTBot, ChatGPT-User, Google-Extended<br>**Sitemap**: 指向 sitemap-index.xml<br>**禁止**: /admin 目录 |
-| **sitemap.xml** | ✅ 完成 | **类型**: Sitemap Index<br>**生成**: Astro @astrojs/sitemap 插件<br>**内容**: 所有页面（首页、产品、博客、静态页面）<br>**更新**: 每次构建自动生成<br>**提交**: 已提交 Google Search Console |
+| **sitemap.xml** | ✅ 完成 | **类型**: Sitemap Index<br>**生成**: Astro @astrojs/sitemap 插件<br>**内容**: 所有页面（首页、品牌、产品、博客、静态页面）<br>**更新**: 每次构建自动生成<br>**提交**: 已提交 Google Search Console |
 | **Meta 标签** | ✅ 完成 | **title**: 每页动态生成，格式 "页面标题 \| XKTRUCK"<br>**description**: 每页独立描述，50-160 字<br>**keywords**: 相关关键词（可选）<br>**viewport**: 响应式设计<br>**charset**: UTF-8 |
 | **Open Graph** | ✅ 完成 | **og:title**: 页面标题<br>**og:description**: 页面描述<br>**og:image**: 社交分享图片（1200x630）<br>**og:url**: 页面 URL<br>**og:type**: website/article/product<br>**og:site_name**: XKTRUCK<br>**用途**: WhatsApp、Facebook、LinkedIn 分享预览 |
 | **Twitter Card** | ✅ 完成 | **twitter:card**: summary_large_image<br>**twitter:title**: 页面标题<br>**twitter:description**: 页面描述<br>**twitter:image**: 分享图片 |

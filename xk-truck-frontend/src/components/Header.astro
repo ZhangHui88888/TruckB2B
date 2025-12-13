@@ -2,6 +2,7 @@
 const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/products', label: 'Products' },
+  { href: '/brands', label: 'Brands' },
   { href: '/blog', label: 'Blog' },
   { href: '/about', label: 'About Us' },
   { href: '/contact', label: 'Contact' },
@@ -136,7 +137,7 @@ const currentPath = Astro.url.pathname;
       <span class="font-medium text-gray-900 whitespace-nowrap">Brands:</span>
       {brands.map(brand => (
         <a 
-          href={`/products?brand=${brand.toLowerCase()}`}
+          href={`/brands/${brand.toLowerCase().replace(/\s+/g, '-')}`}
           class="hover:text-primary whitespace-nowrap transition-colors"
         >
           {brand}
@@ -165,7 +166,7 @@ const currentPath = Astro.url.pathname;
         <div class="flex flex-wrap gap-2 mt-2">
           {brands.map(brand => (
             <a 
-              href={`/products?brand=${brand.toLowerCase()}`}
+              href={`/brands/${brand.toLowerCase().replace(/\s+/g, '-')}`}
               class="text-sm text-gray-600 hover:text-primary"
             >
               {brand}

@@ -169,7 +169,7 @@ const breadcrumbSchema = {
       "@type": "ListItem",
       "position": 3,
       "name": product.brand_name,
-      "item": `https://xk-truck.cn/products?brand=${product.brand_slug}`
+      "item": `https://xk-truck.cn/brands/${product.brand_slug}`
     }] : []),
     {
       "@type": "ListItem",
@@ -197,7 +197,7 @@ const breadcrumbSchema = {
           <>
             <li>/</li>
             <li>
-              <a href={`/products?brand=${product.brand_slug}`} class="hover:text-primary">
+              <a href={`/brands/${product.brand_slug}`} class="hover:text-primary">
                 {product.brand_name}
               </a>
             </li>
@@ -258,7 +258,7 @@ const breadcrumbSchema = {
       <div>
         <div class="mb-4 flex flex-wrap gap-2">
           {product.brand_name && (
-            <a href={`/products?brand=${product.brand_slug}`} class="bg-primary text-white text-sm font-medium px-3 py-1 rounded hover:bg-primary-dark transition-colors">
+            <a href={`/brands/${product.brand_slug}`} class="bg-primary text-white text-sm font-medium px-3 py-1 rounded hover:bg-primary-dark transition-colors">
               {product.brand_name}
             </a>
           )}
