@@ -94,6 +94,144 @@ async function fetchShopifyProducts(collectionSlug) {
 }
 
 /**
+ * 从描述中提取交叉引用号码
+ */
+function extractCrossReferences(text) {
+  const refs = new Set();
+  // 匹配常见的OE号码格式 (6-10位数字)
+  const matches = text.match(/\b\d{6,10}\b/g);
+  if (matches) {
+    matches.forEach(m => refs.add(m));
+  }
+  return Array.from(refs).slice(0, 10); // 最多10个
+}
+
+/**
+ * 从描述中提取适配车型
+ */
+function extractFitment(text, title) {
+  const fitment = new Set();
+  
+  // 从标题提取
+  const titleMatch = title.match(/Compatible with\s+([^-]+)/i);
+  if (titleMatch) {
+    fitment.add(titleMatch[1].trim());
+  }
+  
+  // 从描述中提取车型系列
+  const seriesPatterns = [
+    /(?:VOLVO|Volvo)\s+(FH\d?|FM\d?|FMX|FE)\s*(?:\d{4})?(?:\s*-\s*\d{4})?/gi,
+    /(?:SCANIA|Scania)\s+(R|S|P|G)\s*(?:Series)?/gi,
+    /(?:MERCEDES|Mercedes|Benz)\s+(Actros|Arocs|Atego)\s*(?:MP\d)?/gi,
+    /(?:MAN)\s+(TGX|TGS|TGL|TGM)/gi,
+    /(?:IVECO)\s+(Stralis|S-Way|Eurocargo|Daily)/gi,
+    /(?:RENAULT)\s+(T|C|K|D)\s*(?:Series)?/gi,
+    /(?:DAF)\s+(XF|CF|LF)/gi,
+    /(?:FORD)\s+(Cargo)/gi,
+  ];
+  
+  seriesPatterns.forEach(pattern => {
+    const matches = text.match(pattern);
+    if (matches) {
+      matches.forEach(m => fitment.add(m.trim()));
+    }
+  });
+  
+  return Array.from(fitment).slice(0, 8); // 最多8个
+}
+
+/**
+ * 生成SEO友好的产品描述
+ */
+function generateSEODescription(product, brandSlug, oeNumber, fitment) {
+  const brandName = brandSlug.toUpperCase().replace('MERCEDES-BENZ', 'MERCEDES-BENZ');
+  const productType = extractProductType(product.title);
+  
+  // 第一句：产品核心信息
+  let desc = `High-quality ${productType} designed for ${brandName} trucks`;
+  if (fitment.length > 0) {
+    desc += ` (${fitment[0]})`;
+  }
+  desc += '. ';
+  
+  // 第二句：特点和质量
+  desc += `Features OEM quality construction with premium materials for superior performance and durability. `;
+  
+  // 第三句：OE号码和认证
+  if (oeNumber) {
+    desc += `Direct replacement for OE number ${oeNumber}. `;
+  }
+  desc += `E-Mark certified for European standards. `;
+  
+  // 第四句：供应信息
+  desc += `Factory direct pricing with immediate shipping available from our 35,000㎡ manufacturing facility.`;
+  
+  return desc;
+}
+
+/**
+ * 从标题提取产品类型
+ */
+function extractProductType(title) {
+  const types = {
+    'headlamp': 'LED headlamp',
+    'headlight': 'LED headlight',
+    'tail lamp': 'tail lamp',
+    'tail light': 'tail light',
+    'fog lamp': 'fog lamp',
+    'fog light': 'fog light',
+    'side marker': 'side marker lamp',
+    'mirror': 'mirror assembly',
+    'grille': 'front grille',
+    'bumper': 'bumper',
+    'corner lamp': 'corner lamp',
+  };
+  
+  const lowerTitle = title.toLowerCase();
+  for (const [key, value] of Object.entries(types)) {
+    if (lowerTitle.includes(key)) {
+      return value;
+    }
+  }
+  
+  return 'truck part';
+}
+
+/**
+ * 提取产品特点
+ */
+function extractFeatures(text, productType) {
+  const features = [];
+  
+  // 通用特点
+  features.push('OEM quality construction');
+  features.push('Direct fit replacement');
+  features.push('E-Mark certified');
+  
+  // 根据产品类型添加特定特点
+  if (productType.includes('LED') || productType.includes('lamp') || productType.includes('light')) {
+    features.push('Superior visibility');
+    features.push('Weather resistant design');
+    features.push('Long service life');
+  }
+  
+  if (productType.includes('mirror')) {
+    features.push('Wide viewing angle');
+    features.push('Anti-vibration design');
+  }
+  
+  // 从描述中提取特点关键词
+  const keywords = ['durable', 'premium', 'certified', 'waterproof', 'resistant'];
+  keywords.forEach(kw => {
+    if (text.toLowerCase().includes(kw) && features.length < 8) {
+      features.push(`${kw.charAt(0).toUpperCase() + kw.slice(1)} quality`);
+    }
+  });
+  
+  return features.slice(0, 6);
+}
+
+/**
  * 解析 Shopify 产品数据
  */
 function parseShopifyProduct(product, brandSlug) {
@@ -101,39 +239,46 @@ function parseShopifyProduct(product, brandSlug) {
   const oeMatch = product.title.match(/^(\d{6,})/);
   const oeNumber = oeMatch ? oeMatch[1] : '';
   
-  // 从标题提取适配车型 (Compatible with xxx)
-  const fitment = [];
-  const compatMatch = product.title.match(/Compatible with\s+(.+)/i);
-  if (compatMatch) {
-    fitment.push(compatMatch[1].trim());
-  }
-  
   // 处理图片 URL
   const images = (product.images || []).map(img => img.src);
   
   // 清理 HTML 描述
-  let description = product.body_html || '';
-  // 移除 style 标签
-  description = description.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-  // 移除 HTML 标签
-  description = description.replace(/<[^>]+>/g, ' ');
-  // 清理多余空格
-  description = description.replace(/\s+/g, ' ').trim();
-  // 截取前 2000 字符
-  if (description.length > 2000) {
-    description = description.substring(0, 2000) + '...';
-  }
+  let rawDescription = product.body_html || '';
+  rawDescription = rawDescription.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  rawDescription = rawDescription.replace(/<[^>]+>/g, ' ');
+  rawDescription = rawDescription.replace(/\s+/g, ' ').trim();
+  
+  // 提取结构化信息
+  const crossReferences = extractCrossReferences(rawDescription);
+  const fitment = extractFitment(rawDescription, product.title);
+  const productType = extractProductType(product.title);
+  
+  // 生成SEO友好的描述
+  const seoDescription = generateSEODescription(product, brandSlug, oeNumber, fitment);
+  
+  // 生成简短描述（用于列表页）
+  const shortDescription = `${productType.charAt(0).toUpperCase() + productType.slice(1)} for ${brandSlug.toUpperCase()} trucks${fitment.length > 0 ? ' - ' + fitment[0] : ''}`;
+  
+  // 提取特点
+  const features = extractFeatures(rawDescription, productType);
+  
+  // 提取年份范围
+  const yearMatch = rawDescription.match(/(\d{4})\s*-\s*(\d{4})/);
+  const fitmentYears = yearMatch ? `${yearMatch[1]}-${yearMatch[2]}` : '';
   
   return {
     shopifyId: product.id.toString(),
     handle: product.handle,
     name: product.title,
-    description: description,
-    shortDescription: product.title,
+    description: seoDescription,
+    shortDescription: shortDescription,
     oeNumber: oeNumber,
+    crossReferences: crossReferences.filter(ref => ref !== oeNumber).slice(0, 5), // 排除主OE号，最多5个
     images: images,
     mainImage: images[0] || '',
     fitment: fitment,
+    fitmentYears: fitmentYears,
+    features: features,
     brand: brandSlug,
     tags: product.tags || [],
     vendor: product.vendor,
@@ -252,12 +397,20 @@ async function syncBrand(collectionSlug, dbBrandSlug) {
         brand_id: brandId,
         category_id: categoryId,
         oe_number: parsed.oeNumber,
-        cross_reference: [],
+        cross_reference: parsed.crossReferences,
         main_image_url: parsed.mainImage,
         images: parsed.images,
         fitment: parsed.fitment,
-        specifications: {},
-        features: [],
+        fitment_years: parsed.fitmentYears,
+        specifications: {
+          'Part Type': categoryName,
+          'OE Number': parsed.oeNumber,
+          'Certification': 'E-Mark, ADB',
+          'Voltage': '24V',
+          'Material': 'PP + PC',
+          'Warranty': '12 months',
+        },
+        features: parsed.features,
         source_url: `${CONFIG.sourceUrl}/zh/products/${parsed.handle}`,
         is_active: true,
       };
