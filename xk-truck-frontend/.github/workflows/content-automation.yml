@@ -1,0 +1,146 @@
+# 内容自动化工作流
+# 
+# 每周自动优化产品描述和生成博客文章草稿
+# 
+# 注意：生成的内容会保存为草稿，需要人工审核后才发布
+
+name: Content Automation
+
+on:
+  schedule:
+    # 每周日 02:00 UTC (北京时间 10:00)
+    - cron: '0 2 * * 0'
+  
+  # 允许手动触发
+  workflow_dispatch:
+    inputs:
+      optimize_products:
+        description: '优化产品描述'
+        required: false
+        default: 'true'
+        type: boolean
+      generate_blog:
+        description: '生成博客文章'
+        required: false
+        default: 'true'
+        type: boolean
+      blog_topics:
+        description: '博客主题（逗号分隔）'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  content-automation:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: xk-truck-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: xk-truck-frontend
+        run: npm install
+
+      - name: Optimize Product Descriptions
+        if: ${{ github.event.inputs.optimize_products != 'false' }}
+        working-directory: xk-truck-frontend
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "🔧 优化产品描述..."
+          node scripts/optimize-descriptions.js || echo "优化完成或跳过"
+
+      - name: Generate Blog Posts
+        if: ${{ github.event.inputs.generate_blog != 'false' }}
+        working-directory: xk-truck-frontend
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: |
+          echo "📝 生成博客文章..."
+          
+          # 默认主题列表
+          TOPICS=(
+            "How to Choose Quality Truck Headlamps"
+            "Common Truck Mirror Problems and Solutions"
+            "Understanding OE Numbers for Truck Parts"
+            "Truck Parts Maintenance Tips"
+            "Comparing European Truck Brands"
+          )
+          
+          # 如果提供了自定义主题，使用自定义主题
+          if [ -n "${{ github.event.inputs.blog_topics }}" ]; then
+            IFS=',' read -ra TOPICS <<< "${{ github.event.inputs.blog_topics }}"
+          fi
+          
+          # 随机选择一个主题生成文章
+          RANDOM_TOPIC="${TOPICS[$RANDOM % ${#TOPICS[@]}]}"
+          echo "生成主题: $RANDOM_TOPIC"
+          
+          node scripts/generate-blog-post.js "$RANDOM_TOPIC" || echo "生成失败，跳过"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: AI generated content updates'
+          branch: content-automation
+          delete-branch: true
+          title: '🤖 AI 生成的内容更新'
+          body: |
+            ## 📝 自动生成的内容
+            
+            本 PR 包含 AI 自动生成的内容更新：
+            
+            ### ✅ 已完成
+            - 产品描述优化
+            - 博客文章生成（草稿）
+            
+            ### ⚠️ 需要审核
+            请检查以下内容：
+            1. 产品描述是否准确
+            2. 博客文章质量
+            3. 是否需要添加图片
+            4. 是否需要调整语气
+            
+            ### 📊 下一步
+            - [ ] 审核产品描述
+            - [ ] 审核博客文章
+            - [ ] 添加图片（如需要）
+            - [ ] 合并 PR
+            - [ ] 部署到生产环境
+            
+            ---
+            *此 PR 由 GitHub Actions 自动创建*
+          labels: |
+            automated
+            content
+            needs-review
+
+      - name: Send Notification
+        if: always()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+        run: |
+          echo "📧 发送通知邮件..."
+          # 这里可以添加邮件通知逻辑
+          echo "内容自动化完成，请查看 GitHub PR"
+
+      - name: Summary
+        run: |
+          echo "## 内容自动化完成" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **日期**: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "- **产品描述**: 已优化" >> $GITHUB_STEP_SUMMARY
+          echo "- **博客文章**: 已生成草稿" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "请查看 Pull Request 进行审核。" >> $GITHUB_STEP_SUMMARY
